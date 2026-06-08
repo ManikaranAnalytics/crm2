@@ -1,0 +1,127 @@
+                                       Table "public.client_pss"
+   Column    |           Type           | Collation | Nullable |                Default                 
+-------------+--------------------------+-----------+----------+----------------------------------------
+ id          | integer                  |           | not null | nextval('client_pss_id_seq'::regclass)
+ client_id   | integer                  |           | not null | 
+ name        | text                     |           | not null | 
+ capacity_mw | numeric(10,2)            |           |          | 
+ technology  | technology               |           |          | 
+ state       | text                     |           |          | 
+ created_at  | timestamp with time zone |           |          | now()
+ updated_at  | timestamp with time zone |           |          | now()
+ sps         | boolean                  |           | not null | false
+ aggregation | boolean                  |           | not null | false
+Indexes:
+    "client_pss_pkey" PRIMARY KEY, btree (id)
+Foreign-key constraints:
+    "client_pss_client_id_fkey" FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+Referenced by:
+    TABLE "queries" CONSTRAINT "queries_pss_id_fkey" FOREIGN KEY (pss_id) REFERENCES client_pss(id)
+
+                                            Table "public.queries"
+        Column        |           Type           | Collation | Nullable |               Default               
+----------------------+--------------------------+-----------+----------+-------------------------------------
+ id                   | integer                  |           | not null | nextval('queries_id_seq'::regclass)
+ query_code           | text                     |           | not null | 
+ client_id            | integer                  |           |          | 
+ pss_id               | integer                  |           |          | 
+ query_raised_date    | timestamp with time zone |           |          | 
+ query_entry_date     | timestamp with time zone |           |          | 
+ state                | text                     |           |          | 
+ pss_text             | text                     |           |          | 
+ group                | text                     |           |          | 
+ capacity_mw          | numeric(10,2)            |           |          | 
+ technology           | technology               |           |          | 
+ transmission_type    | text                     |           |          | 
+ period_of_issue      | text                     |           |          | 
+ issue                | text                     |           | not null | 
+ raised_by            | text                     |           |          | 
+ responsibility_to    | text                     |           |          | 
+ current_status       | query_status             |           | not null | 'OPEN'::query_status
+ closed_date          | timestamp with time zone |           |          | 
+ delay                | text                     |           |          | 
+ expected_closure     | timestamp with time zone |           |          | 
+ created_at           | timestamp with time zone |           |          | now()
+ updated_at           | timestamp with time zone |           |          | now()
+ raised_by_id         | integer                  |           |          | 
+ responsibility_to_id | integer                  |           |          | 
+ close_request_date   | timestamp with time zone |           |          | 
+Indexes:
+    "queries_pkey" PRIMARY KEY, btree (id)
+    "queries_query_code_key" UNIQUE CONSTRAINT, btree (query_code)
+Foreign-key constraints:
+    "queries_client_id_fkey" FOREIGN KEY (client_id) REFERENCES clients(id)
+    "queries_pss_id_fkey" FOREIGN KEY (pss_id) REFERENCES client_pss(id)
+    "queries_raised_by_id_fkey" FOREIGN KEY (raised_by_id) REFERENCES users(id)
+    "queries_responsibility_to_id_fkey" FOREIGN KEY (responsibility_to_id) REFERENCES users(id)
+Referenced by:
+    TABLE "query_approvals" CONSTRAINT "query_approvals_query_id_fkey" FOREIGN KEY (query_id) REFERENCES queries(id) ON DELETE CASCADE
+
+                                       Table "public.clients"
+   Column    |           Type           | Collation | Nullable |               Default               
+-------------+--------------------------+-----------+----------+-------------------------------------
+ id          | integer                  |           | not null | nextval('clients_id_seq'::regclass)
+ name        | text                     |           | not null | 
+ state       | text                     |           |          | 
+ is_approved | boolean                  |           | not null | false
+ created_by  | integer                  |           |          | 
+ approved_by | integer                  |           |          | 
+ approved_at | timestamp with time zone |           |          | 
+ created_at  | timestamp with time zone |           |          | now()
+ updated_at  | timestamp with time zone |           |          | now()
+Indexes:
+    "clients_pkey" PRIMARY KEY, btree (id)
+Foreign-key constraints:
+    "clients_approved_by_fkey" FOREIGN KEY (approved_by) REFERENCES users(id)
+    "clients_created_by_fkey" FOREIGN KEY (created_by) REFERENCES users(id)
+Referenced by:
+    TABLE "client_pss" CONSTRAINT "client_pss_client_id_fkey" FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+    TABLE "queries" CONSTRAINT "queries_client_id_fkey" FOREIGN KEY (client_id) REFERENCES clients(id)
+    TABLE "requests" CONSTRAINT "requests_client_id_fkey" FOREIGN KEY (client_id) REFERENCES clients(id)
+    TABLE "trips" CONSTRAINT "trips_client_id_fkey" FOREIGN KEY (client_id) REFERENCES clients(id)
+
+                                        Table "public.users"
+    Column     |           Type           | Collation | Nullable |              Default              
+---------------+--------------------------+-----------+----------+-----------------------------------
+ id            | integer                  |           | not null | nextval('users_id_seq'::regclass)
+ email         | text                     |           | not null | 
+ password_hash | text                     |           | not null | 
+ name          | text                     |           | not null | 
+ role_id       | integer                  |           | not null | 
+ rank          | integer                  |           | not null | 
+ is_active     | boolean                  |           | not null | true
+ created_at    | timestamp with time zone |           |          | now()
+ updated_at    | timestamp with time zone |           |          | now()
+Indexes:
+    "users_pkey" PRIMARY KEY, btree (id)
+    "users_email_key" UNIQUE CONSTRAINT, btree (email)
+Foreign-key constraints:
+    "users_role_id_fkey" FOREIGN KEY (role_id) REFERENCES roles(id)
+Referenced by:
+    TABLE "attachments" CONSTRAINT "attachments_uploaded_by_fkey" FOREIGN KEY (uploaded_by) REFERENCES users(id)
+    TABLE "clients" CONSTRAINT "clients_approved_by_fkey" FOREIGN KEY (approved_by) REFERENCES users(id)
+    TABLE "clients" CONSTRAINT "clients_created_by_fkey" FOREIGN KEY (created_by) REFERENCES users(id)
+    TABLE "queries" CONSTRAINT "queries_raised_by_id_fkey" FOREIGN KEY (raised_by_id) REFERENCES users(id)
+    TABLE "queries" CONSTRAINT "queries_responsibility_to_id_fkey" FOREIGN KEY (responsibility_to_id) REFERENCES users(id)
+    TABLE "query_approvals" CONSTRAINT "query_approvals_approver_id_fkey" FOREIGN KEY (approver_id) REFERENCES users(id)
+    TABLE "query_approvals" CONSTRAINT "query_approvals_requested_by_fkey" FOREIGN KEY (requested_by) REFERENCES users(id)
+    TABLE "requests" CONSTRAINT "requests_requester_id_fkey" FOREIGN KEY (requester_id) REFERENCES users(id)
+    TABLE "trip_approvals" CONSTRAINT "trip_approvals_approver_id_fkey" FOREIGN KEY (approver_id) REFERENCES users(id)
+    TABLE "trips" CONSTRAINT "trips_user_id_fkey" FOREIGN KEY (user_id) REFERENCES users(id)
+
+                                         Table "public.roles"
+     Column     |           Type           | Collation | Nullable |              Default              
+----------------+--------------------------+-----------+----------+-----------------------------------
+ id             | integer                  |           | not null | nextval('roles_id_seq'::regclass)
+ name           | role_name                |           | not null | 
+ travel_budget  | numeric(10,2)            |           |          | 
+ lodging_budget | numeric(10,2)            |           |          | 
+ food_budget    | numeric(10,2)            |           |          | 
+ created_at     | timestamp with time zone |           |          | now()
+ updated_at     | timestamp with time zone |           |          | now()
+Indexes:
+    "roles_pkey" PRIMARY KEY, btree (id)
+    "roles_name_key" UNIQUE CONSTRAINT, btree (name)
+Referenced by:
+    TABLE "users" CONSTRAINT "users_role_id_fkey" FOREIGN KEY (role_id) REFERENCES roles(id)
+
