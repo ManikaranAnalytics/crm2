@@ -5,7 +5,7 @@ import {
   CAN_MANAGE_CLIENTS,
   type RoleName,
 } from '../../lib/auth/roles';
-import { useAuth } from '../_app';
+import { authHeaders, useAuth } from '../_app';
 
 const CAN_MANAGE_MASTER_PSS: RoleName[] = ['ADMIN', 'GM', 'MANAGER'];
 
@@ -31,7 +31,6 @@ interface DbOverview {
   clients: number;
   client_pss: number;
   queries: number;
-  requests: number;
   attachments: number;
 }
 
@@ -66,6 +65,7 @@ interface ClientPssItem {
 	const AdminPage: React.FC = () => {
 	  const { user } = useAuth();
 	  const canManageMasterPss = !!user && CAN_MANAGE_MASTER_PSS.includes(user.role as RoleName);
+	  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'USERS_ROLES' | 'CLIENTS' | 'CLIENT_PSS' | 'MASTER_PSS'>('OVERVIEW');
 	  const [roles, setRoles] = useState<RoleRecord[]>([]);
 	  const [dbOverview, setDbOverview] = useState<DbOverview | null>(null);
 	  const [users, setUsers] = useState<AdminUser[]>([]);
@@ -124,17 +124,18 @@ interface ClientPssItem {
   const [selectedClientId, setSelectedClientId] = useState<string>('');
 
   useEffect(() => {
+    if (!user || user.role !== 'ADMIN') return;
     const load = async () => {
       setLoading(true);
       setError(null);
       try {
         const [rolesRes, dbRes, usersRes, clientsRes, pssRes, masterRes] = await Promise.all([
-          fetch('/api/admin/roles'),
-          fetch('/api/admin/db-overview'),
-          fetch('/api/admin/users'),
-          fetch('/api/admin/clients'),
-          fetch('/api/admin/client-pss'),
-          fetch('/api/pss-master'),
+          fetch('/api/admin/roles', { headers: authHeaders() }),
+          fetch('/api/admin/db-overview', { headers: authHeaders() }),
+          fetch('/api/admin/users', { headers: authHeaders() }),
+          fetch('/api/admin/clients', { headers: authHeaders() }),
+          fetch('/api/admin/client-pss', { headers: authHeaders() }),
+          fetch('/api/pss-master', { headers: authHeaders() }),
         ]);
 
         if (!rolesRes.ok) {
@@ -186,7 +187,7 @@ interface ClientPssItem {
     };
 
     load();
-  }, []);
+  }, [user]);
 
 
   const handleCreateRole = async (e: React.FormEvent) => {
@@ -202,7 +203,7 @@ interface ClientPssItem {
     try {
       const res = await fetch('/api/admin/roles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           name: trimmedName,
         }),
@@ -222,7 +223,7 @@ interface ClientPssItem {
   const handleDeleteRole = async (id: number) => {
     setError(null);
     try {
-      const res = await fetch(`/api/admin/roles?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/roles?id=${id}`, { method: 'DELETE', headers: authHeaders() });
       if (!res.ok && res.status !== 204) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || 'Failed to delete role');
@@ -245,7 +246,7 @@ interface ClientPssItem {
     try {
       const res = await fetch('/api/admin/users', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           email: newUser.email,
           name: newUser.name,
@@ -275,7 +276,7 @@ interface ClientPssItem {
   const handleDeleteUser = async (id: number) => {
     setError(null);
     try {
-      const res = await fetch(`/api/admin/users?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/users?id=${id}`, { method: 'DELETE', headers: authHeaders() });
       if (!res.ok && res.status !== 204) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || 'Failed to delete user');
@@ -306,8 +307,8 @@ interface ClientPssItem {
 	    setError(null);
 	    try {
 	      const res = await fetch('/api/admin/users', {
-	        method: 'PATCH',
-	        headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
 	        body: JSON.stringify({
 	          id: editUser.id,
 	          email: editUser.email,
@@ -343,7 +344,7 @@ interface ClientPssItem {
     try {
       const res = await fetch('/api/admin/clients', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           name: newClient.name,
           state: newClient.state || null,
@@ -367,7 +368,7 @@ interface ClientPssItem {
     try {
       const res = await fetch('/api/admin/clients', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           id: client.id,
           isApproved: !client.isApproved,
@@ -388,7 +389,7 @@ interface ClientPssItem {
   const handleDeleteClient = async (id: number) => {
     setError(null);
     try {
-      const res = await fetch(`/api/admin/clients?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/clients?id=${id}`, { method: 'DELETE', headers: authHeaders() });
       if (!res.ok && res.status !== 204) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || 'Failed to delete client');
@@ -421,7 +422,7 @@ interface ClientPssItem {
 	    try {
 	      const res = await fetch('/api/admin/clients', {
 	        method: 'PATCH',
-	        headers: { 'Content-Type': 'application/json' },
+	        headers: authHeaders({ 'Content-Type': 'application/json' }),
 	        body: JSON.stringify({
 	          id: editClient.id,
 	          name: editClient.name,
@@ -455,7 +456,7 @@ interface ClientPssItem {
     try {
       const res = await fetch('/api/admin/client-pss', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           clientId: Number(newPss.clientId),
           name: newPss.name,
@@ -486,7 +487,7 @@ interface ClientPssItem {
   const handleDeletePss = async (id: number) => {
     setError(null);
     try {
-      const res = await fetch(`/api/admin/client-pss?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/client-pss?id=${id}`, { method: 'DELETE', headers: authHeaders() });
       if (!res.ok && res.status !== 204) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || 'Failed to delete PSS');
@@ -517,8 +518,8 @@ interface ClientPssItem {
 	    setError(null);
 	    try {
 	      const res = await fetch('/api/admin/client-pss', {
-	        method: 'PATCH',
-	        headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
 	        body: JSON.stringify({
 	          id: editPss.id,
 	          name: editPss.name,
@@ -583,7 +584,7 @@ interface ClientPssItem {
     try {
       const res = await fetch('/api/pss-master', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           id: editMaster.id,
           name: editMaster.name,
@@ -617,7 +618,7 @@ interface ClientPssItem {
     setError(null);
     setMasterMessage(null);
     try {
-      const res = await fetch(`/api/pss-master?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/pss-master?id=${id}`, { method: 'DELETE', headers: authHeaders() });
       if (!res.ok && res.status !== 204) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || 'Failed to delete master PSS');
@@ -640,7 +641,7 @@ interface ClientPssItem {
     try {
       const res = await fetch('/api/pss-master', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           name: newMaster.name.trim(),
           utility: newMaster.utility || null,
@@ -676,13 +677,13 @@ interface ClientPssItem {
     setError(null);
     setMasterMessage(null);
     try {
-      const res = await fetch('/api/pss-master?mode=reimport', { method: 'POST' });
+      const res = await fetch('/api/pss-master?mode=reimport', { method: 'POST', headers: authHeaders() });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || 'Failed to re-import from Excel');
       }
       const body = await res.json();
-      const listRes = await fetch('/api/pss-master');
+      const listRes = await fetch('/api/pss-master', { headers: authHeaders() });
       const listBody = listRes.ok ? await listRes.json() : { pss: [] };
       setMasterPss(listBody.pss || []);
       setMasterMessage(`Imported ${body.inserted ?? 0} new PSS from Excel.`);
@@ -707,14 +708,59 @@ interface ClientPssItem {
     },
   ];
 
+  if (!user) {
+    return (
+      <Layout>
+        <div className="space-y-4 p-5">
+          <h2 className="text-2xl font-semibold text-slate-900">Admin</h2>
+          <p className="text-sm text-slate-500">Please sign in to access the Admin Console.</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (user.role !== 'ADMIN') {
+    return (
+      <Layout>
+        <div className="space-y-4 p-5">
+          <h2 className="text-2xl font-semibold text-slate-900">Admin</h2>
+          <p className="text-sm text-slate-500">Only admin users can access the Admin Console.</p>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
-      <div className="space-y-8">
-        <div>
-          <h2 className="text-2xl font-semibold text-slate-900">Admin</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Inspect permissions, see database tables, and manage roles, users, clients, and PSS mappings.
-          </p>
+      <div className="space-y-6">
+
+        {/* Tab Navigation */}
+        <div className="border-b border-slate-200 bg-white px-2 rounded-lg shadow-sm">
+          <nav className="-mb-px flex gap-6" aria-label="Admin tabs">
+            {[
+              { id: 'OVERVIEW', label: 'Overview' },
+              { id: 'USERS_ROLES', label: 'Users & Roles' },
+              { id: 'CLIENTS', label: 'Clients' },
+              { id: 'CLIENT_PSS', label: 'Client PSS Mappings' },
+              { id: 'MASTER_PSS', label: 'Master PSS List' },
+            ].map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`inline-flex items-center border-b-2 px-1 py-3 text-sm font-semibold transition-colors duration-150 ${
+                    isActive
+                      ? 'border-teal-600 text-teal-700'
+                      : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
         </div>
 
         {error && (
@@ -723,134 +769,138 @@ interface ClientPssItem {
           </p>
         )}
 
-        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-slate-900">Role-based permissions</h3>
-          <p className="mt-1 text-xs text-slate-500">
-            Derived from <code className="rounded bg-slate-100 px-1">lib/auth/roles.ts</code> and the roles you
-            have created below.
-          </p>
-          {roles.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-500">
-              No roles defined yet. Create roles in the section below to see the permission matrix.
-            </p>
-          ) : (
-            <div className="mt-4 overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">Permission</th>
-                    {roles.map((role) => (
-                      <th key={role.id} className="px-3 py-2 font-medium">
-                        {role.name}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {permissions.map((perm) => (
-                    <tr key={perm.key} className="border-b border-slate-100 last:border-b-0">
-                      <td className="px-3 py-2 text-slate-700">{perm.key}</td>
-                      {roles.map((role) => {
-                        const enabled = perm.allowedRoles.includes(role.name as RoleName);
-                        return (
-                          <td key={role.id} className="px-3 py-2">
-                            <span
-                              className={
-                                enabled
-                                  ? 'inline-flex rounded-full bg-teal-50 px-2 text-xs font-medium text-teal-700'
-                                  : 'inline-flex rounded-full bg-slate-50 px-2 text-xs font-medium text-slate-400'
-                              }
-                            >
-                              {enabled ? 'Yes' : 'No'}
-                            </span>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+        {activeTab === 'OVERVIEW' && (
+          <>
+            <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="text-sm font-semibold text-slate-900">Role-based permissions</h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Derived from <code className="rounded bg-slate-100 px-1">lib/auth/roles.ts</code> and the roles you
+                have created below.
+              </p>
+              {roles.length === 0 ? (
+                <p className="mt-4 text-sm text-slate-500">
+                  No roles defined yet. Create roles in the section below to see the permission matrix.
+                </p>
+              ) : (
+                <div className="mt-4 overflow-x-auto">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">Permission</th>
+                        {roles.map((role) => (
+                          <th key={role.id} className="px-3 py-2 font-medium">
+                            {role.name}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {permissions.map((perm) => (
+                        <tr key={perm.key} className="border-b border-slate-100 last:border-b-0">
+                          <td className="px-3 py-2 text-slate-700">{perm.key}</td>
+                          {roles.map((role) => {
+                            const enabled = perm.allowedRoles.includes(role.name as RoleName);
+                            return (
+                              <td key={role.id} className="px-3 py-2">
+                                <span
+                                  className={
+                                    enabled
+                                      ? 'inline-flex rounded-full bg-teal-50 px-2 text-xs font-medium text-teal-700'
+                                      : 'inline-flex rounded-full bg-slate-50 px-2 text-xs font-medium text-slate-400'
+                                  }
+                                >
+                                  {enabled ? 'Yes' : 'No'}
+                                </span>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
 
-        <section className="grid gap-6 md:grid-cols-2">
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-900">Database tables</h3>
-            <p className="mt-1 text-xs text-slate-500">High-level overview of key tables.</p>
-            {loading && !dbOverview ? (
-              <p className="mt-3 text-sm text-slate-500">Loading DB overview hellip;</p>
-            ) : dbOverview ? (
-              <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                {Object.entries(dbOverview).map(([key, value]) => (
-                  <div key={key} className="rounded-md bg-slate-50 px-3 py-2">
-                    <dt className="text-[11px] uppercase tracking-wide text-slate-500">{key}</dt>
-                    <dd className="text-base font-semibold text-slate-900">{value}</dd>
+            <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="text-sm font-semibold text-slate-900">Database tables</h3>
+              <p className="mt-1 text-xs text-slate-500">High-level overview of key tables.</p>
+              {loading && !dbOverview ? (
+                <p className="mt-3 text-sm text-slate-500">Loading DB overview hellip;</p>
+              ) : dbOverview ? (
+                <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  {Object.entries(dbOverview).map(([key, value]) => (
+                    <div key={key} className="rounded-md bg-slate-50 px-3 py-2">
+                      <dt className="text-[11px] uppercase tracking-wide text-slate-500">{key}</dt>
+                      <dd className="text-base font-semibold text-slate-900">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : (
+                <p className="mt-3 text-sm text-slate-500">No data yet.</p>
+              )}
+            </section>
+          </>
+        )}
+
+        {activeTab === 'USERS_ROLES' && (
+          <div className="grid gap-6 md:grid-cols-[1fr_2fr]">
+            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="text-sm font-semibold text-slate-900">Roles</h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Manage which roles are available. These are used when assigning roles to users.
+              </p>
+
+              <div className="mt-4 space-y-3">
+                {roles.length === 0 && !loading && (
+                  <p className="text-sm text-slate-500">No roles defined yet. Use the form below to add one.</p>
+                )}
+                {roles.map((role) => (
+                  <div
+                    key={role.id}
+                    className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  >
+                    <div className="font-medium text-slate-900">{role.name}</div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteRole(role.id)}
+                      className="text-xs font-medium text-red-600 hover:text-red-700"
+                    >
+                      Remove
+                    </button>
                   </div>
                 ))}
-              </dl>
-            ) : (
-              <p className="mt-3 text-sm text-slate-500">No data yet.</p>
-            )}
-          </div>
+              </div>
 
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-900">Roles</h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Manage which roles are available. These are used when assigning roles to users.
-            </p>
-
-            <div className="mt-4 space-y-3">
-              {roles.length === 0 && !loading && (
-                <p className="text-sm text-slate-500">No roles defined yet. Use the form below to add one.</p>
-              )}
-              {roles.map((role) => (
-                <div
-                  key={role.id}
-                  className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2 text-sm"
-                >
-                  <div className="font-medium text-slate-900">{role.name}</div>
+              <form
+                onSubmit={handleCreateRole}
+                className="mt-4 space-y-3 border-t border-slate-200 pt-4 text-sm"
+              >
+                <div>
+                  <label className="block text-xs font-medium text-slate-600" htmlFor="role-name">
+                    Role name
+                  </label>
+                  <input
+                    id="role-name"
+                    type="text"
+                    value={newRole.name}
+                    onChange={(e) =>
+                      setNewRole((prev) => ({ ...prev, name: e.target.value as RoleName }))
+                    }
+                    placeholder="e.g. ADMIN, MANAGER, KAM"
+                    className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-xs shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  />
+                </div>
+                <div className="flex justify-end">
                   <button
-                    type="button"
-                    onClick={() => handleDeleteRole(role.id)}
-                    className="text-xs font-medium text-red-600 hover:text-red-700"
+                    type="submit"
+                    className="inline-flex items-center rounded-md bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-teal-700"
                   >
-                    Remove
+                    Add role
                   </button>
                 </div>
-              ))}
+              </form>
             </div>
-
-            <form
-              onSubmit={handleCreateRole}
-              className="mt-4 space-y-3 border-t border-slate-200 pt-4 text-sm"
-            >
-              <div>
-                <label className="block text-xs font-medium text-slate-600" htmlFor="role-name">
-                  Role name
-                </label>
-                <input
-                  id="role-name"
-                  type="text"
-                  value={newRole.name}
-                  onChange={(e) =>
-                    setNewRole((prev) => ({ ...prev, name: e.target.value as RoleName }))
-                  }
-                  placeholder="e.g. ADMIN, MANAGER, GM"
-                  className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-xs shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                />
-              </div>
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="inline-flex items-center rounded-md bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-teal-700"
-                >
-                  Add role
-                </button>
-              </div>
-            </form>
-          </div>
-        </section>
 
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
@@ -1107,11 +1157,13 @@ interface ClientPssItem {
             </div>
           </form>
         </section>
+      </div>
+    )}
 
-        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-900">Clients</h3>
+    {activeTab === 'CLIENTS' && (
+      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">Clients</h3>
               <p className="mt-1 text-xs text-slate-500">
                 Approve clients and see how many PSS entries are linked to each.
               </p>
@@ -1286,7 +1338,11 @@ interface ClientPssItem {
                 </form>
               </details>
             </div>
+          </section>
+        )}
 
+        {activeTab === 'CLIENT_PSS' && (
+          <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
             <div>
               <h3 className="text-sm font-semibold text-slate-900">PSS mappings</h3>
               <p className="mt-1 text-xs text-slate-500">
@@ -1589,10 +1645,11 @@ interface ClientPssItem {
                 </form>
               </details>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
-        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        {activeTab === 'MASTER_PSS' && (
+          <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold text-slate-900">Master PSS list</h3>
@@ -1926,6 +1983,7 @@ interface ClientPssItem {
             </details>
           )}
         </section>
+      )}
 
         <p className="text-xs text-slate-400">
           Note: User management, client approval, and PSS mapping admin pages can be added as

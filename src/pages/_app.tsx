@@ -2,7 +2,7 @@ import type { AppProps } from 'next/app';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import '../styles.css';
 
-export type RoleName = 'ADMIN' | 'EMPLOYEE' | 'MANAGER' | 'GM' | 'KAM';
+export type RoleName = 'ADMIN' | 'MANAGER' | 'KAM';
 
 export interface UserSession {
   id: number;
@@ -15,6 +15,7 @@ export interface UserSession {
 interface AuthContextValue {
   user: UserSession | null;
   setUser: (user: UserSession | null) => void;
+  initialized: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -50,6 +51,7 @@ export function authHeaders(extra?: Record<string, string>): Record<string, stri
 
 const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUserState] = useState<UserSession | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
   const getCookie = (name: string) =>
     document.cookie.split('; ').find(r => r.startsWith(name + '='))?.split('=')[1];
@@ -72,19 +74,26 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const raw = getCookie('crm_session');
-    if (raw) { try { setUser(JSON.parse(decodeURIComponent(raw))); } catch {} return; }
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setUserState(JSON.parse(stored) as UserSession);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(raw));
+        setUserState(parsed);
+      } catch {}
+    } else {
+      try {
+        const stored = window.localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          setUserState(JSON.parse(stored) as UserSession);
+        }
+      } catch {
+        /* ignore */
       }
-    } catch {
-      /* ignore */
     }
+    setInitialized(true);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, setUser }}>
+    <AuthContext.Provider value={{ user, setUser, initialized }}>
       {children}
     </AuthContext.Provider>
   );

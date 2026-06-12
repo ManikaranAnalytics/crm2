@@ -161,10 +161,6 @@ const TodaySolvedPage: React.FC = () => {
   return (
     <Layout>
       <div className="space-y-4">
-        <div>
-          <h2 className="text-2xl font-semibold text-slate-900">Solved Queries</h2>
-          <p className="text-sm text-slate-500">All resolved queries with filters.</p>
-        </div>
         <QueryTabs active="TODAY" />
 
         <div className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">

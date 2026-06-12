@@ -1,17 +1,22 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { query } from '../../../lib/db';
 
+import { getSessionUser } from '../../../lib/auth/session';
+
 interface DbOverviewRow {
   roles: number;
   users: number;
   clients: number;
   client_pss: number;
   queries: number;
-  requests: number;
   attachments: number;
 }
 
-export default async function handler(_req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const user = await getSessionUser(req);
+  if (!user || user.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
   try {
     const result = await query<DbOverviewRow>(
       `SELECT
@@ -20,7 +25,6 @@ export default async function handler(_req: NextApiRequest, res: NextApiResponse
          (SELECT COUNT(*)::int FROM clients) AS clients,
          (SELECT COUNT(*)::int FROM client_pss) AS client_pss,
          (SELECT COUNT(*)::int FROM queries) AS queries,
-         (SELECT COUNT(*)::int FROM requests) AS requests,
          (SELECT COUNT(*)::int FROM attachments) AS attachments`,
     );
 

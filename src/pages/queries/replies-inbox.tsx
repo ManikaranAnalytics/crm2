@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import QueryTabs from '../../components/QueryTabs';
-import QueryConversationModal from '../../components/QueryConversationModal';
 import { authHeaders, useAuth } from '../_app';
 
 interface ReplyItem {
@@ -32,10 +32,10 @@ const formatDate = (iso: string): string => new Date(iso).toLocaleString();
 
 const RepliesInboxPage: React.FC = () => {
   const { user } = useAuth();
+  const router = useRouter();
   const [replies, setReplies] = useState<ReplyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeQueryId, setActiveQueryId] = useState<number | null>(null);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [filterGenBy, setFilterGenBy] = useState('');
@@ -214,8 +214,6 @@ const RepliesInboxPage: React.FC = () => {
       `}</style>
 
       <div className="inbox-page">
-        <h1 className="inbox-title">Query Replies</h1>
-        <p className="inbox-subtitle">{subtitle}</p>
         <QueryTabs active="REPLIES" />
 
         <div className="filter-bar">
@@ -333,11 +331,11 @@ const RepliesInboxPage: React.FC = () => {
                     <tr
                       key={meta.query_id}
                       className="clickable"
-                      onClick={() => setActiveQueryId(meta.query_id)}
+                      onClick={() => router.push(`/queries/reply?id=${meta.query_id}`)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
-                          setActiveQueryId(meta.query_id);
+                          router.push(`/queries/reply?id=${meta.query_id}`);
                         }
                       }}
                       tabIndex={0}
@@ -357,12 +355,6 @@ const RepliesInboxPage: React.FC = () => {
           )}
         </div>
       </div>
-
-      <QueryConversationModal
-        queryId={activeQueryId}
-        canReply={false}
-        onClose={() => setActiveQueryId(null)}
-      />
     </Layout>
   );
 };

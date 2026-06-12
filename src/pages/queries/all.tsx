@@ -50,9 +50,11 @@ const AllQueriesPage: React.FC = () => {
   const closeDocFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const isAdmin = !!user && user.role === 'ADMIN';
+  const isKam = !!user && user.role === 'KAM';
+  const hasAccess = isAdmin || isKam;
 
   useEffect(() => {
-    if (!user || !isAdmin) return;
+    if (!user || !hasAccess) return;
     const load = async () => {
       setLoading(true);
       setError(null);
@@ -71,7 +73,7 @@ const AllQueriesPage: React.FC = () => {
       }
     };
     load();
-  }, [user, isAdmin]);
+  }, [user, hasAccess]);
 
   const handleStatusChange = async (queryId: number, newStatus: string) => {
     if (!user) {
@@ -224,12 +226,12 @@ const AllQueriesPage: React.FC = () => {
     );
   }
 
-  if (!isAdmin) {
+  if (!hasAccess) {
     return (
       <Layout>
         <div className="space-y-4">
           <h2 className="text-2xl font-semibold text-slate-900">All Queries</h2>
-          <p className="text-sm text-slate-500">Only admin users can view all queries.</p>
+          <p className="text-sm text-slate-500">Only admin and KAM users can view all queries.</p>
         </div>
       </Layout>
     );
@@ -241,13 +243,7 @@ const AllQueriesPage: React.FC = () => {
   return (
     <Layout>
       <div className="space-y-4">
-        <div>
-          <h2 className="text-2xl font-semibold text-slate-900">All Queries</h2>
-          <p className="text-sm text-slate-500">
-            All technical queries across clients, regardless of raiser or assignee.
-          </p>
-        </div>
-        <QueryTabs active="ALL" />
+        <QueryTabs active={isKam ? 'REPLIES' : 'ALL'} />
         <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
           {error && (
             <p className="border-b border-slate-100 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>
@@ -305,7 +301,7 @@ const AllQueriesPage: React.FC = () => {
 	                )}
                 {!loading &&
                   queries.map((q, index) => {
-                    const isEditable = EDITABLE_STATUS_OPTIONS.some((opt) => opt.value === q.status);
+                    const isEditable = isAdmin && EDITABLE_STATUS_OPTIONS.some((opt) => opt.value === q.status);
                     return (
                       <tr key={q.id}>
                         <td className="px-4 py-2 text-slate-800">{index + 1}</td>

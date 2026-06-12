@@ -15,7 +15,7 @@ export async function getEligibleAssignees(): Promise<AssigneeCandidate[]> {
        JOIN roles r ON r.id = u.role_id
        LEFT JOIN queries q ON q.responsibility_to_id = u.id
       WHERE u.is_active = TRUE
-        AND r.name IN ('EMPLOYEE', 'MANAGER', 'GM')
+        AND r.name = 'MANAGER'
       GROUP BY u.id, u.name
       ORDER BY workload ASC, u.id ASC`,
     [],

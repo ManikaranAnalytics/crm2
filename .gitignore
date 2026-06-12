@@ -17,3 +17,10 @@ npm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Uploads
+uploads_secure/
+
+# TypeScript Build Info
+tsconfig.tsbuildinfo
+

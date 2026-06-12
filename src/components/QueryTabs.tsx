@@ -49,7 +49,7 @@ const QueryTabs: React.FC<QueryTabsProps> = ({ active }) => {
           </Link>
         )}
         {canViewReplies && (
-          <Link href="/queries/replies-inbox" className={`${tabBase} ${tabClass('REPLIES')}`}>
+          <Link href={role === 'KAM' ? "/queries/all" : "/queries/replies-inbox"} className={`${tabBase} ${tabClass('REPLIES')}`}>
             Query Replies
           </Link>
         )}

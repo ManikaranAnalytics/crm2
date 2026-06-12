@@ -59,22 +59,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const buffer = Buffer.from(String(item.dataBase64), 'base64');
         const uploadsDir = path.join(
           process.cwd(),
-          'public',
-          'uploads',
-          'queries',
-          String(qId),
-          'replies',
+          'uploads_secure',
+          `query_${qId}`
         );
         await fs.promises.mkdir(uploadsDir, { recursive: true });
         const safeName = String(item.fileName).replace(/[^a-zA-Z0-9._-]/g, '_');
-        const diskPath = path.join(uploadsDir, safeName);
+        const timestamp = Math.floor(Date.now() / 1000);
+        const uniqueName = `reply_${qId}_${timestamp}_${safeName}`;
+        const diskPath = path.join(uploadsDir, uniqueName);
         await fs.promises.writeFile(diskPath, buffer);
-        const publicPath = `/uploads/queries/${qId}/replies/${safeName}`;
+        const publicPath = `/api/attachments/query_${qId}/${uniqueName}`;
         const contentType =
           typeof item.contentType === 'string' && item.contentType
             ? item.contentType
             : 'application/octet-stream';
-
+ 
         const attachmentResult = await query<{ id: number }>(
           `INSERT INTO attachments (owner_type, owner_id, file_name, file_path, content_type, uploaded_by)
            VALUES ('QUERY', $1, $2, $3, $4, $5)

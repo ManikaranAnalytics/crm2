@@ -135,6 +135,10 @@ interface PssOption {
 			setError('Please upload a .msg email file');
 			return;
 		}
+		if (file.size > 20 * 1024 * 1024) {
+			setError('File size must be less than 20MB');
+			return;
+		}
 		setError(null);
 		const reader = new FileReader();
 		reader.onload = () => {
@@ -166,6 +170,13 @@ interface PssOption {
 			e.preventDefault();
 			setMessage(null);
 			setError(null);
+			if (form.capacityMw) {
+				const capVal = parseFloat(form.capacityMw);
+				if (isNaN(capVal) || capVal <= 0) {
+					setError('Capacity (MW) must be a positive number');
+					return;
+				}
+			}
 			// Require the original client email (.msg) for every new query
 			if (!attachment) {
 				setError('Please attach the client email (.msg) before saving the query.');
@@ -236,10 +247,6 @@ interface PssOption {
 		return (
 			<Layout>
 				<div className="space-y-4">
-					<div>
-						<h2 className="text-2xl font-semibold text-slate-900">Queries</h2>
-						<p className="mt-1 text-sm text-slate-500">Add a new technical query.</p>
-					</div>
 					<QueryTabs active="ADD" />
 					<div className="mt-4 grid gap-8 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
 					<form

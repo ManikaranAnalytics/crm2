@@ -1,0 +1,13 @@
+node_modules
+.next
+.local-postgres
+uploads_secure
+out
+build
+.git
+.gitignore
+*.log
+.env.local
+.env.*.local
+*.sql
+*.xlsx

@@ -27,7 +27,14 @@ function mapClient(row: ClientRow): ClientResponse {
   };
 }
 
+import { getSessionUser } from '../../../lib/auth/session';
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const user = await getSessionUser(req);
+  if (!user || user.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
   if (req.method === 'GET') {
     const result = await query<ClientRow>(
       `SELECT c.id,

@@ -1,162 +1,81 @@
 import React, { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Layout from '../components/Layout';
 import { useAuth } from './_app';
 
+// Dynamically import Highcharts component to prevent SSR "window is not defined" issues
+const DashboardChart = dynamic(() => import('../components/DashboardChart'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-48 w-full flex items-center justify-center bg-slate-50/50 rounded-lg">
+      <div className="text-xs text-slate-400">Loading interactive chart...</div>
+    </div>
+  ),
+});
+
 interface DashboardSummary {
-	totalQueries: number;
-	openQueries: number;
-	inProgressQueries: number;
-	assignedQueries: number;
-	queriesThisMonth: number;
+  totalQueries: number;
+  openQueries: number;
+  inProgressQueries: number;
+  assignedQueries: number;
+  queriesThisMonth: number;
 }
 
 interface QueryAnalyticsPoint {
-	label: string;
-	value: number;
+  label: string;
+  value: number;
 }
 
 interface StateQuarterlyPoint {
-	state: string;
-	quarter: string;
-	value: number;
+  state: string;
+  quarter: string;
+  value: number;
 }
 
-interface SimpleBarChartProps {
-	data: QueryAnalyticsPoint[];
-	colorClass?: string;
-	height?: number; // kept for API compatibility; SVG has fixed viewBox
-}
+// Custom Premium Icons for Metrics Cards
+const IconTotal = () => (
+  <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+    <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+    <path d="M3 5V19A9 3 0 0 0 21 19V5"></path>
+    <path d="M3 12A9 3 0 0 0 21 12"></path>
+  </svg>
+);
 
-const SimpleBarChart: React.FC<SimpleBarChartProps> = ({
-	data,
-	colorClass = 'bg-teal-500',
-}) => {
-	if (!data.length) return null;
-	const max = data.reduce((m, d) => Math.max(m, d.value), 0) || 1;
-	const n = data.length;
+const IconOpen = () => (
+  <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="8" x2="12" y2="12"></line>
+    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+  </svg>
+);
 
-	// Map Tailwind color tokens to explicit hex so SVG bars are always visible
-	const colorMap: Record<string, string> = {
-		'bg-teal-500': '#14b8a6',
-		'bg-indigo-500': '#6366f1',
-		'bg-emerald-500': '#10b981',
-		'bg-sky-500': '#0ea5e9',
-		'bg-purple-500': '#a855f7',
-		'bg-rose-500': '#f43f5e',
-	};
-	const fill = colorMap[colorClass] || '#0f766e';
+const IconProgress = () => (
+  <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="10"></circle>
+    <polyline points="12 6 12 12 16 14"></polyline>
+  </svg>
+);
 
-		// basic bar layout inside 0–100 viewBox
-		const leftMargin = 8;
-		const rightMargin = 8;
-		const topMargin = 8;
-		const bottomMargin = 22; // room for labels under the axis
-		const chartWidth = 100 - leftMargin - rightMargin;
-		const chartHeight = 100 - topMargin - bottomMargin;
-		const baselineY = topMargin + chartHeight;
-		const gap = n > 1 ? chartWidth / (n * 3) : chartWidth / 3;
-		const barWidth = n > 0 ? (chartWidth - gap * (n - 1)) / n : chartWidth;
+const IconAssign = () => (
+  <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+    <circle cx="9" cy="7" r="4"></circle>
+    <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+  </svg>
+);
 
-		return (
-			<div className="mt-2">
-				<svg viewBox="0 0 100 100" className="h-48 w-full">
-					{/* baseline */}
-					<line
-						x1={leftMargin}
-						y1={baselineY}
-						x2={leftMargin + chartWidth}
-						y2={baselineY}
-						stroke="#e5e7eb"
-						strokeWidth={1}
-					/>
-					{data.map((d, idx) => {
-						const valueRatio = d.value / max;
-						const barHeight = Math.max(2, valueRatio * chartHeight);
-						const x = leftMargin + idx * (barWidth + gap);
-						const y = baselineY - barHeight;
-						const centerX = x + barWidth / 2;
-						return (
-							<g key={`${d.label}-${idx}`}>
-								<rect
-									x={x}
-									y={y}
-									width={barWidth}
-									height={barHeight}
-									rx={1.5}
-									fill={fill}
-								/>
-								{/* value above bar */}
-								<text
-									x={centerX}
-									y={y - 2}
-									fontSize={4}
-									fill="#0f172a"
-									textAnchor="middle"
-								>
-									{d.value}
-								</text>
-								{/* label under baseline, aligned with bar */}
-								<text
-									x={centerX}
-									y={baselineY + 7}
-									fontSize={3.5}
-									fill="#64748b"
-									textAnchor="middle"
-								>
-									{d.label}
-								</text>
-							</g>
-					);
-					})}
-				</svg>
-			</div>
-		);
-};
-
-interface SimpleLineChartProps {
-	data: QueryAnalyticsPoint[];
-}
-
-const SimpleLineChart: React.FC<SimpleLineChartProps> = ({ data }) => {
-	if (!data.length) return null;
-	const max = data.reduce((m, d) => Math.max(m, d.value), 0) || 1;
-	const n = data.length;
-	const points = data
-		.map((d, idx) => {
-			const x = (idx / Math.max(1, n - 1)) * 100;
-			const y = 100 - (d.value / max) * 100;
-			return `${x},${y}`;
-		})
-		.join(' ');
-
-		return (
-			<div className="mt-4">
-				<svg viewBox="0 0 100 100" className="h-52 w-full">
-				<polyline
-					fill="none"
-					stroke="#0f766e"
-					strokeWidth={2}
-					strokeLinejoin="round"
-					strokeLinecap="round"
-					points={points}
-				/>
-				{data.map((d, idx) => {
-					const x = (idx / Math.max(1, n - 1)) * 100;
-					const y = 100 - (d.value / max) * 100;
-					return <circle key={d.label} cx={x} cy={y} r={1.5} fill="#0f766e" />;
-				})}
-			</svg>
-			<div className="mt-2 flex justify-between text-[10px] text-slate-500">
-				<span>{data[0]?.label}</span>
-				{n > 2 && <span>{data[Math.floor(n / 2)]?.label}</span>}
-				{n > 1 && <span>{data[n - 1]?.label}</span>}
-			</div>
-		</div>
-	);
-};
+const IconMonth = () => (
+  <svg className="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+    <line x1="16" y1="2" x2="16" y2="6"></line>
+    <line x1="8" y1="2" x2="8" y2="6"></line>
+    <line x1="3" y1="10" x2="21" y2="10"></line>
+  </svg>
+);
 
 const DashboardPage: React.FC = () => {
-	const { user } = useAuth();
+  const { user } = useAuth();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [byStatus, setByStatus] = useState<QueryAnalyticsPoint[]>([]);
   const [byTechnology, setByTechnology] = useState<QueryAnalyticsPoint[]>([]);
@@ -167,33 +86,21 @@ const DashboardPage: React.FC = () => {
   const [byState, setByState] = useState<QueryAnalyticsPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-	  // const [scope, setScope] = useState<'ALL' | 'ME'>('ALL');
-	  const scope = 'ALL' as const;
+  const scope = 'ALL' as const;
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       setError(null);
       try {
-	        // if (scope === 'ME' && !user) {
-	        //   setScope('ALL');
-	        //   setLoading(false);
-	        //   return;
-	        // }
-
-	        const params = new URLSearchParams();
-	        // if (scope === 'ME' && user) {
-	        //   params.set('scope', 'user');
-	        //   params.set('userId', String(user.id));
-	        // } else {
-	          params.set('scope', 'all');
-	        // }
-	        const qs = params.toString();
-	        const suffix = qs ? `?${qs}` : '';
-	        const [summaryRes, analyticsRes] = await Promise.all([
-	          fetch(`/api/dashboard/summary${suffix}`),
-	          fetch(`/api/analytics/queries${suffix}`),
-	        ]);
+        const params = new URLSearchParams();
+        params.set('scope', 'all');
+        const qs = params.toString();
+        const suffix = qs ? `?${qs}` : '';
+        const [summaryRes, analyticsRes] = await Promise.all([
+          fetch(`/api/dashboard/summary${suffix}`),
+          fetch(`/api/analytics/queries${suffix}`),
+        ]);
 
         if (!summaryRes.ok) {
           const body = await summaryRes.json().catch(() => ({}));
@@ -229,45 +136,25 @@ const DashboardPage: React.FC = () => {
         setLoading(false);
       }
     };
-	    
-	    load();
-	  }, [scope, user]);
+
+    load();
+  }, [scope, user]);
 
   return (
     <Layout>
-      <div className="space-y-8">
-	        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-	          <div>
-	            <h2 className="text-2xl font-semibold text-slate-900">Dashboard</h2>
-	            <p className="text-sm text-slate-500">
-	              Overview of technical queries: volumes, status mix, team performance, and state-wise
-	              analysis.
-	            </p>
-	          </div>
-	          <div className="flex items-center gap-2 text-xs">
-	            <span className="text-slate-500">View stats for:</span>
-	            <button
-	              type="button"
-	              className="rounded-full border border-teal-600 bg-teal-600 px-3 py-1 font-medium text-white"
-	            >
-	              All users
-	            </button>
-	            {/*
-	            <button
-	              type="button"
-	              disabled={!user}
-	              onClick={() => user && setScope('ME')}
-	              className={`rounded-full border px-3 py-1 font-medium ${
-	                scope === 'ME'
-	                  ? 'border-teal-600 bg-teal-600 text-white'
-	                  : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
-	              } ${!user ? 'cursor-not-allowed opacity-50' : ''}`}
-	            >
-	              My assignments
-	            </button>
-	            */}
-	          </div>
-	        </div>
+      <div className="space-y-8 text-left">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-slate-500 font-semibold">Active Filter:</span>
+            <button
+              type="button"
+              className="rounded-full border border-teal-600 bg-teal-55 bg-teal-50 px-3 py-1.5 font-semibold text-teal-700 shadow-sm flex items-center gap-1.5 hover:bg-teal-100 transition-colors"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-teal-500 animate-pulse"></span>
+              All Users & Regions
+            </button>
+          </div>
+        </div>
 
         {error && (
           <p className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
@@ -275,158 +162,240 @@ const DashboardPage: React.FC = () => {
           </p>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Total Queries</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-900">
+        {/* METRICS CARDS PANEL */}
+        <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+          {/* Card 1 */}
+          <div className="relative group overflow-hidden bg-white border border-slate-200/80 rounded-xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.015)] hover:-translate-y-0.5 transition-all duration-200">
+            <div className="absolute top-0 left-0 w-full h-[3px] bg-teal-500"></div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Queries</span>
+              <div className="h-8 w-8 rounded-full bg-teal-50 flex items-center justify-center group-hover:bg-teal-100 transition-colors">
+                <IconTotal />
+              </div>
+            </div>
+            <p className="mt-4 text-3xl font-extrabold text-slate-800 tracking-tight">
               {summary ? summary.totalQueries : loading ? '—' : 0}
             </p>
+            <p className="text-[10px] text-slate-400 mt-2">Overall database volume</p>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Open Queries</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-900">
+
+          {/* Card 2 */}
+          <div className="relative group overflow-hidden bg-white border border-slate-200/80 rounded-xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.015)] hover:-translate-y-0.5 transition-all duration-200">
+            <div className="absolute top-0 left-0 w-full h-[3px] bg-indigo-500"></div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Open Queries</span>
+              <div className="h-8 w-8 rounded-full bg-indigo-50 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+                <IconOpen />
+              </div>
+            </div>
+            <p className="mt-4 text-3xl font-extrabold text-slate-800 tracking-tight">
               {summary ? summary.openQueries : loading ? '—' : 0}
             </p>
+            <p className="text-[10px] text-slate-400 mt-2">Awaiting initial action</p>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">In Progress</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-900">
+
+          {/* Card 3 */}
+          <div className="relative group overflow-hidden bg-white border border-slate-200/80 rounded-xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.015)] hover:-translate-y-0.5 transition-all duration-200">
+            <div className="absolute top-0 left-0 w-full h-[3px] bg-emerald-500"></div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">In Progress</span>
+              <div className="h-8 w-8 rounded-full bg-emerald-50 flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
+                <IconProgress />
+              </div>
+            </div>
+            <p className="mt-4 text-3xl font-extrabold text-slate-800 tracking-tight">
               {summary ? summary.inProgressQueries : loading ? '—' : 0}
             </p>
+            <p className="text-[10px] text-slate-400 mt-2">Currently being resolved</p>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Active Assignments</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-900">
+
+          {/* Card 4 */}
+          <div className="relative group overflow-hidden bg-white border border-slate-200/80 rounded-xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.015)] hover:-translate-y-0.5 transition-all duration-200">
+            <div className="absolute top-0 left-0 w-full h-[3px] bg-sky-500"></div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Active Queue</span>
+              <div className="h-8 w-8 rounded-full bg-sky-50 flex items-center justify-center group-hover:bg-sky-100 transition-colors">
+                <IconAssign />
+              </div>
+            </div>
+            <p className="mt-4 text-3xl font-extrabold text-slate-800 tracking-tight">
               {summary ? summary.assignedQueries : loading ? '—' : 0}
             </p>
+            <p className="text-[10px] text-slate-400 mt-2">Assigned to resolver team</p>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Queries This Month</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-900">
+
+          {/* Card 5 */}
+          <div className="relative group overflow-hidden bg-white border border-slate-200/80 rounded-xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.015)] hover:-translate-y-0.5 transition-all duration-200">
+            <div className="absolute top-0 left-0 w-full h-[3px] bg-rose-500"></div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">This Month</span>
+              <div className="h-8 w-8 rounded-full bg-rose-50 flex items-center justify-center group-hover:bg-rose-100 transition-colors">
+                <IconMonth />
+              </div>
+            </div>
+            <p className="mt-4 text-3xl font-extrabold text-slate-800 tracking-tight">
               {summary ? summary.queriesThisMonth : loading ? '—' : 0}
             </p>
+            <p className="text-[10px] text-slate-400 mt-2">New volume in current cycle</p>
           </div>
         </div>
 
-	        <section className="grid gap-6 md:grid-cols-2">
-	          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-	            <h3 className="text-sm font-semibold text-slate-900">Queries by status</h3>
-	            <p className="mt-1 text-xs text-slate-500">
-	              Data comes directly from the <code className="rounded bg-slate-100 px-1">queries</code>{' '}
-	              table.
-	            </p>
-	            <div className="mt-4">
-	              {byStatus.length === 0 && !loading && (
-	                <p className="text-sm text-slate-500">No query data yet.</p>
-	              )}
-	              {byStatus.length > 0 && (
-	                <SimpleBarChart data={byStatus} colorClass="bg-teal-500" />
-	              )}
-	            </div>
-	          </div>
-	
-	          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-	            <h3 className="text-sm font-semibold text-slate-900">Queries by technology</h3>
-	            <p className="mt-1 text-xs text-slate-500">
-	              This will later feed into Highcharts or another charting library.
-	            </p>
-	            <div className="mt-4">
-	              {byTechnology.length === 0 && !loading && (
-	                <p className="text-sm text-slate-500">No query data yet.</p>
-	              )}
-	              {byTechnology.length > 0 && (
-	                <SimpleBarChart data={byTechnology} colorClass="bg-indigo-500" />
-	              )}
-	            </div>
-	          </div>
-	        </section>
+        {/* CHARTS CONTAINER - SECTION 1 */}
+        <section className="grid gap-6 md:grid-cols-2">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
+            <div className="border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Queries by status</h3>
+              <p className="mt-0.5 text-xs text-slate-400">Operational query breakdown by status type.</p>
+            </div>
+            <div className="mt-6">
+              {byStatus.length === 0 && !loading ? (
+                <p className="text-sm text-slate-500 italic">No query data yet.</p>
+              ) : (
+                <DashboardChart
+                  type="column"
+                  categories={byStatus.map((d) => d.label)}
+                  seriesData={byStatus.map((d) => d.value)}
+                  seriesName="Queries"
+                  colors={['#0f766e']}
+                />
+              )}
+            </div>
+          </div>
 
-	        <section className="grid gap-6 md:grid-cols-2">
-	          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-	            <h3 className="text-sm font-semibold text-slate-900">Technical queries (month-wise)</h3>
-	            <p className="mt-1 text-xs text-slate-500">Counts of queries grouped by month.</p>
-	            <div className="mt-4">
-	              {byMonth.length === 0 && !loading && (
-	                <p className="text-sm text-slate-500">No query data yet.</p>
-	              )}
-	              {byMonth.length > 0 && (
-	                <SimpleBarChart data={byMonth} colorClass="bg-emerald-500" />
-	              )}
-	            </div>
-	          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
+            <div className="border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Queries by technology</h3>
+              <p className="mt-0.5 text-xs text-slate-400">Distribution of queries across energy technologies.</p>
+            </div>
+            <div className="mt-6">
+              {byTechnology.length === 0 && !loading ? (
+                <p className="text-sm text-slate-500 italic">No query data yet.</p>
+              ) : (
+                <DashboardChart
+                  type="column"
+                  categories={byTechnology.map((d) => d.label)}
+                  seriesData={byTechnology.map((d) => d.value)}
+                  seriesName="Queries"
+                  colors={['#4f46e5']}
+                />
+              )}
+            </div>
+          </div>
+        </section>
 
-	          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-	            <h3 className="text-sm font-semibold text-slate-900">Date-wise technical queries</h3>
-	            <p className="mt-1 text-xs text-slate-500">
-	              Daily counts for the last 90 days (suitable for a line chart later).
-	            </p>
-	            <div className="mt-4 max-h-64 space-y-2 overflow-y-auto text-xs">
-	              {byDate.length === 0 && !loading && (
-	                <p className="text-sm text-slate-500">No recent query data.</p>
-	              )}
-	              {byDate.length > 0 && <SimpleLineChart data={byDate} />}
-	            </div>
-	          </div>
-	        </section>
+        {/* CHARTS CONTAINER - SECTION 2 */}
+        <section className="grid gap-6 md:grid-cols-2">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
+            <div className="border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Technical queries (month-wise)</h3>
+              <p className="mt-0.5 text-xs text-slate-400">Monthly query trend aggregate volumes.</p>
+            </div>
+            <div className="mt-6">
+              {byMonth.length === 0 && !loading ? (
+                <p className="text-sm text-slate-500 italic">No query data yet.</p>
+              ) : (
+                <DashboardChart
+                  type="column"
+                  categories={byMonth.map((d) => d.label)}
+                  seriesData={byMonth.map((d) => d.value)}
+                  seriesName="Queries"
+                  colors={['#10b981']}
+                />
+              )}
+            </div>
+          </div>
 
-	        <section className="grid gap-6 md:grid-cols-2">
-	          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-	            <h3 className="text-sm font-semibold text-slate-900">Team workload (assignee-wise)</h3>
-	            <p className="mt-1 text-xs text-slate-500">
-	              Active (non-closed) queries per assignee using auto-assignment workload.
-	            </p>
-	            <div className="mt-4">
-	              {byUser.length === 0 && !loading && (
-	                <p className="text-sm text-slate-500">No query data yet.</p>
-	              )}
-	              {byUser.length > 0 && (
-	                <SimpleBarChart data={byUser} colorClass="bg-sky-500" />
-	              )}
-	            </div>
-	          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
+            <div className="border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Date-wise technical queries</h3>
+              <p className="mt-0.5 text-xs text-slate-400">Daily frequency trend of incoming queries.</p>
+            </div>
+            <div className="mt-6">
+              {byDate.length === 0 && !loading ? (
+                <p className="text-sm text-slate-500 italic">No recent query data.</p>
+              ) : (
+                <DashboardChart
+                  type="area"
+                  categories={byDate.map((d) => d.label)}
+                  seriesData={byDate.map((d) => d.value)}
+                  seriesName="Queries"
+                  colors={['#0f766e']}
+                />
+              )}
+            </div>
+          </div>
+        </section>
 
-	          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-	            <h3 className="text-sm font-semibold text-slate-900">State-wise query analysis</h3>
-	            <p className="mt-1 text-xs text-slate-500">Total queries per state.</p>
-	            <div className="mt-4">
-	              {byState.length === 0 && !loading && (
-	                <p className="text-sm text-slate-500">No query data yet.</p>
-	              )}
-	              {byState.length > 0 && (
-	                <SimpleBarChart data={byState} colorClass="bg-purple-500" />
-	              )}
-	            </div>
-	          </div>
-	        </section>
+        {/* CHARTS CONTAINER - SECTION 3 */}
+        <section className="grid gap-6 md:grid-cols-2">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
+            <div className="border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Team workload (assignee-wise)</h3>
+              <p className="mt-0.5 text-xs text-slate-400">Active assigned query distribution among team members.</p>
+            </div>
+            <div className="mt-6">
+              {byUser.length === 0 && !loading ? (
+                <p className="text-sm text-slate-500 italic">No query data yet.</p>
+              ) : (
+                <DashboardChart
+                  type="column"
+                  categories={byUser.map((d) => d.label)}
+                  seriesData={byUser.map((d) => d.value)}
+                  seriesName="Queries"
+                  colors={['#0ea5e9']}
+                />
+              )}
+            </div>
+          </div>
 
-	        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-	          <h3 className="text-sm font-semibold text-slate-900">
-	            State-wise queries (quarterly comparison)
-	          </h3>
-	          <p className="mt-1 text-xs text-slate-500">
-	            Each row shows a state and quarter with its query count. This can later be visualised as a
-	            multi-series chart.
-	          </p>
-	          <div className="mt-4 max-h-72 overflow-y-auto text-xs">
-	            {byStateQuarterly.length === 0 && !loading && (
-	              <p className="text-sm text-slate-500">No query data yet.</p>
-	            )}
-	            {byStateQuarterly.length > 0 && (
-	              <SimpleBarChart
-	                data={byStateQuarterly.map((p) => ({
-	                  label: `${p.state} - ${p.quarter}`,
-	                  value: p.value,
-	                }))}
-	                colorClass="bg-rose-500"
-	                height={140}
-	              />
-	            )}
-	          </div>
-	        </section>
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
+            <div className="border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">State-wise query analysis</h3>
+              <p className="mt-0.5 text-xs text-slate-400">Geographic distribution of raised queries.</p>
+            </div>
+            <div className="mt-6">
+              {byState.length === 0 && !loading ? (
+                <p className="text-sm text-slate-500 italic">No query data yet.</p>
+              ) : (
+                <DashboardChart
+                  type="column"
+                  categories={byState.map((d) => d.label)}
+                  seriesData={byState.map((d) => d.value)}
+                  seriesName="Queries"
+                  colors={['#8b5cf6']}
+                />
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* CHARTS CONTAINER - SECTION 4 */}
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
+          <div className="border-b border-slate-100 pb-3">
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+              State-wise queries (quarterly comparison)
+            </h3>
+            <p className="mt-0.5 text-xs text-slate-400">
+              Granular quarterly state-wise comparison of query volumes.
+            </p>
+          </div>
+          <div className="mt-6">
+            {byStateQuarterly.length === 0 && !loading ? (
+              <p className="text-sm text-slate-500 italic">No query data yet.</p>
+            ) : (
+              <DashboardChart
+                type="column"
+                categories={byStateQuarterly.map((p) => `${p.state} - ${p.quarter}`)}
+                seriesData={byStateQuarterly.map((p) => p.value)}
+                seriesName="Queries"
+                colors={['#ec4899']}
+              />
+            )}
+          </div>
+        </section>
       </div>
     </Layout>
   );
 };
 
 export default DashboardPage;
-

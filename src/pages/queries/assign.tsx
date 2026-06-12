@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import QueryTabs from '../../components/QueryTabs';
-import QueryConversationModal from '../../components/QueryConversationModal';
 import { formatQueryStatus, isQueryActive, statusBadgeClass } from '../../lib/queryStatus';
 import { useAuth } from '../_app';
 
@@ -27,12 +27,11 @@ const rowAccentClass = (status: string): string => {
 
 const AssignQueriesPage: React.FC = () => {
   const { user } = useAuth();
+  const router = useRouter();
   const [queries, setQueries] = useState<AssignedQuery[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [activeQueryId, setActiveQueryId] = useState<number | null>(null);
-  const [replyQueryId, setReplyQueryId] = useState<number | null>(null);
 
   const canReply = !!user && ['ADMIN', 'MANAGER'].includes(user.role);
 
@@ -59,11 +58,6 @@ const AssignQueriesPage: React.FC = () => {
     loadQueries();
   }, [loadQueries]);
 
-  const handleReplySent = () => {
-    setSuccess('Query Resolved — removed from active queue.');
-    setReplyQueryId(null);
-    loadQueries();
-  };
 
   if (!user) {
     return (
@@ -90,13 +84,6 @@ const AssignQueriesPage: React.FC = () => {
   return (
     <Layout>
       <div className="space-y-4">
-        <div>
-          <h2 className="text-2xl font-semibold text-slate-900">Queries</h2>
-          <p className="text-sm text-slate-500">
-            Active queries awaiting a reply. Any authorized team member can reply — the first reply
-            resolves the query and notifies the creator.
-          </p>
-        </div>
         <QueryTabs active="ASSIGN" />
         <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
           {error && (
@@ -170,7 +157,7 @@ const AssignQueriesPage: React.FC = () => {
                       <td className="px-4 py-2 text-[11px] text-slate-700">
                         {q.attachments && q.attachments.length > 0 ? (
                           <a
-                            href={q.attachments[0].url}
+                            href={user ? `${q.attachments[0].url}?actorId=${user.id}` : q.attachments[0].url}
                             target="_blank"
                             rel="noreferrer"
                             className="text-indigo-600 hover:underline"
@@ -192,7 +179,7 @@ const AssignQueriesPage: React.FC = () => {
                         <div className="flex justify-end gap-2">
                           <button
                             type="button"
-                            onClick={() => setActiveQueryId(q.id)}
+                            onClick={() => router.push(`/queries/reply?id=${q.id}`)}
                             className="rounded-md border border-teal-200 px-3 py-1.5 text-xs font-medium text-teal-700 hover:bg-teal-50"
                           >
                             View thread
@@ -200,10 +187,7 @@ const AssignQueriesPage: React.FC = () => {
                           {isQueryActive(q.status) && (
                             <button
                               type="button"
-                              onClick={() => {
-                                setSuccess(null);
-                                setReplyQueryId(q.id);
-                              }}
+                              onClick={() => router.push(`/queries/reply?id=${q.id}`)}
                               className="rounded-md bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700"
                             >
                               Reply
@@ -218,18 +202,6 @@ const AssignQueriesPage: React.FC = () => {
           </div>
         </div>
       </div>
-
-      <QueryConversationModal
-        queryId={activeQueryId}
-        canReply={false}
-        onClose={() => setActiveQueryId(null)}
-      />
-      <QueryConversationModal
-        queryId={replyQueryId}
-        canReply
-        onClose={() => setReplyQueryId(null)}
-        onReplySent={handleReplySent}
-      />
     </Layout>
   );
 };

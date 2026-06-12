@@ -13,7 +13,7 @@ const COPY_ESCAPE_MAP = {
 };
 
 function getConnectionString() {
-  return process.env.SUPABASE_DB_URL || process.argv[2];
+  return process.env.DATABASE_URL || process.env.SUPABASE_DB_URL || process.argv[2];
 }
 
 function getDumpPath() {
@@ -142,7 +142,7 @@ async function deployDatabase() {
 
   if (!connectionString) {
     console.error(
-      'Provide the Supabase database URL as SUPABASE_DB_URL or as the first script argument.'
+      'Provide the database URL as DATABASE_URL environment variable or as the first script argument.'
     );
     process.exit(1);
   }

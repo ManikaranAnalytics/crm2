@@ -35,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 	        return res.status(401).json({ error: 'Not authenticated' });
 	      }
 
-	      // Only ADMIN users should be able to view all queries regardless of assignment.
+	      // ADMIN and KAM users should be able to view all queries regardless of assignment.
 	      const roleResult = await query<{ role_name: string }>(
 	        `SELECT r.name AS role_name
 	           FROM users u
@@ -44,8 +44,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 	        [actorId],
 	      );
 	      const roleName = roleResult.rows[0]?.role_name;
-	      if (!roleName || roleName !== 'ADMIN') {
-	        return res.status(403).json({ error: 'Only admin can view all queries' });
+	      if (!roleName || (roleName !== 'ADMIN' && roleName !== 'KAM')) {
+	        return res.status(403).json({ error: 'Only admin and KAM can view all queries' });
 	      }
 
 	      const queries = await listQueries();
@@ -115,16 +115,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		      const buffer = Buffer.from(base64, 'base64');
 		      const uploadsDir = path.join(
 		        process.cwd(),
-		        'public',
-		        'uploads',
-		        'queries',
-		        String(created.id),
+		        'uploads_secure',
+		        `query_${created.id}`
 		      );
 		      await fs.promises.mkdir(uploadsDir, { recursive: true });
 		      const safeName = String(attachment.fileName).replace(/[^a-zA-Z0-9._-]/g, '_');
-		      const diskPath = path.join(uploadsDir, safeName);
+		      const timestamp = Math.floor(Date.now() / 1000);
+		      const uniqueName = `query_${created.id}_${timestamp}_${safeName}`;
+		      const diskPath = path.join(uploadsDir, uniqueName);
 		      await fs.promises.writeFile(diskPath, buffer);
-		      const publicPath = `/uploads/queries/${created.id}/${safeName}`;
+		      const publicPath = `/api/attachments/query_${created.id}/${uniqueName}`;
 		      const contentType =
 		        typeof attachment.contentType === 'string' && attachment.contentType
 		          ? attachment.contentType

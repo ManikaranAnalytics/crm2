@@ -69,16 +69,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		      const buffer = Buffer.from(base64, 'base64');
 		      const uploadsDir = path.join(
 		        process.cwd(),
-		        'public',
-		        'uploads',
-		        'queries',
-		        String(updated.id),
+		        'uploads_secure'
 		      );
 		      await fs.promises.mkdir(uploadsDir, { recursive: true });
 		      const safeName = String(attachment.fileName).replace(/[^a-zA-Z0-9._-]/g, '_');
-		      const diskPath = path.join(uploadsDir, safeName);
+		      const timestamp = Math.floor(Date.now() / 1000);
+		      const uniqueName = `query_${updated.id}_${timestamp}_${safeName}`;
+		      const diskPath = path.join(uploadsDir, uniqueName);
 		      await fs.promises.writeFile(diskPath, buffer);
-		      const publicPath = `/uploads/queries/${updated.id}/${safeName}`;
+		      const publicPath = `/api/attachments/${uniqueName}`;
 		      const contentType =
 		        typeof attachment.contentType === 'string' && attachment.contentType
 		          ? attachment.contentType
@@ -102,16 +101,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		      const bufferDoc = Buffer.from(base64Doc, 'base64');
 		      const uploadsDirDoc = path.join(
 		        process.cwd(),
-		        'public',
-		        'uploads',
-		        'queries',
-		        String(updated.id),
+		        'uploads_secure'
 		      );
 		      await fs.promises.mkdir(uploadsDirDoc, { recursive: true });
 		      const safeDocName = String(docAttachment.fileName).replace(/[^a-zA-Z0-9._-]/g, '_');
-		      const diskDocPath = path.join(uploadsDirDoc, safeDocName);
+		      const timestampDoc = Math.floor(Date.now() / 1000);
+		      const uniqueDocName = `query_${updated.id}_${timestampDoc}_${safeDocName}`;
+		      const diskDocPath = path.join(uploadsDirDoc, uniqueDocName);
 		      await fs.promises.writeFile(diskDocPath, bufferDoc);
-		      const publicDocPath = `/uploads/queries/${updated.id}/${safeDocName}`;
+		      const publicDocPath = `/api/attachments/${uniqueDocName}`;
 		      const docContentType =
 		        typeof docAttachment.contentType === 'string' && docAttachment.contentType
 		          ? docAttachment.contentType

@@ -34,9 +34,33 @@ function pickActorId(req: NextApiRequest): number | null {
   return null;
 }
 
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_development_secret_do_not_use_in_production';
+
 export async function getSessionUser(req: NextApiRequest): Promise<SessionUser | null> {
-  const actorId = pickActorId(req);
+  let actorId: number | null = null;
+
+  // 1. Try to read from the secure HttpOnly cookie crm_session_token
+  const cookieVal = req.cookies?.crm_session_token;
+  if (cookieVal) {
+    try {
+      const decoded = jwt.verify(cookieVal, JWT_SECRET) as { id: number };
+      if (decoded && decoded.id) {
+        actorId = decoded.id;
+      }
+    } catch {
+      // Invalid or expired token
+    }
+  }
+
+  // 2. Fall back to raw headers/body/query parameters ONLY in development mode
+  if (!actorId && process.env.NODE_ENV !== 'production') {
+    actorId = pickActorId(req);
+  }
+
   if (!actorId) return null;
+
   try {
     const result = await query<{
       id: number;

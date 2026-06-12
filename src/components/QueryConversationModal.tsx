@@ -2,6 +2,26 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { authHeaders } from '../pages/_app';
 import { formatQueryStatus, isQueryResolved, statusBadgeClass } from '../lib/queryStatus';
 
+const IconPaperclip = () => (
+  <svg className="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+  </svg>
+);
+
+const IconMail = () => (
+  <svg className="w-4 h-4 inline ml-1.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+    <polyline points="22,6 12,13 2,6"></polyline>
+  </svg>
+);
+
+const IconClose = () => (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+    <line x1="18" y1="6" x2="6" y2="18"></line>
+    <line x1="6" y1="6" x2="18" y2="18"></line>
+  </svg>
+);
+
 export interface QueryThreadMessage {
   id: string;
   type: 'ORIGINAL' | 'REPLY';
@@ -154,6 +174,58 @@ const QueryConversationModal: React.FC<QueryConversationModalProps> = ({
     }
   };
 
+  const handleExportEml = () => {
+    if (!replyBody.trim()) {
+      alert('Please enter a response body before exporting.');
+      return;
+    }
+
+    const to = 'client@example.com';
+    const subject = `RE: ${thread?.queryCode || 'Query Response'}`;
+    const boundary = `----=_NextPart_${Math.random().toString(36).substring(2)}`;
+    
+    const headers = [
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      `X-Unsent: 1`,
+      `MIME-Version: 1.0`,
+      `Content-Type: multipart/mixed; boundary="${boundary}"`,
+      '',
+      `--${boundary}`,
+      `Content-Type: text/html; charset=utf-8`,
+      `Content-Transfer-Encoding: 7bit`,
+      '',
+      `<html><body>${replyBody.replace(/\n/g, '<br>')}</body></html>`,
+    ];
+
+    const attachmentBlocks = attachments.map(att => {
+      return [
+        `--${boundary}`,
+        `Content-Type: ${att.contentType || 'application/octet-stream'}; name="${att.fileName}"`,
+        `Content-Transfer-Encoding: base64`,
+        `Content-Disposition: attachment; filename="${att.fileName}"`,
+        '',
+        att.dataBase64
+      ].join('\r\n');
+    });
+
+    const fullEml = [
+      ...headers,
+      ...attachmentBlocks,
+      `--${boundary}--`
+    ].join('\r\n');
+
+    const blob = new Blob([fullEml], { type: 'message/rfc822' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${(thread?.queryCode || 'draft').replace(/[^a-z0-9]/gi, '_')}.eml`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   if (!queryId) return null;
 
   const resolved = thread ? isQueryResolved(thread.status) : false;
@@ -171,10 +243,10 @@ const QueryConversationModal: React.FC<QueryConversationModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="text-lg text-white/70 hover:text-white"
+              className="text-lg text-white/70 hover:text-white flex items-center justify-center"
               aria-label="Close"
             >
-              ✕
+              <IconClose />
             </button>
           </div>
           <div className="mt-2 flex items-center justify-between gap-3">
@@ -361,9 +433,9 @@ const QueryConversationModal: React.FC<QueryConversationModalProps> = ({
                       href={att.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="mt-2 inline-block text-xs text-indigo-600 hover:underline"
+                      className="mt-2 inline-flex items-center text-xs text-indigo-600 hover:underline"
                     >
-                      📎 {att.fileName}
+                      <IconPaperclip /> {att.fileName}
                     </a>
                   ))}
                   {message.attachment && (
@@ -371,9 +443,9 @@ const QueryConversationModal: React.FC<QueryConversationModalProps> = ({
                       href={message.attachment.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="mt-2 inline-block text-xs text-indigo-600 hover:underline"
+                      className="mt-2 inline-flex items-center text-xs text-indigo-600 hover:underline"
                     >
-                      📎 {message.attachment.fileName}
+                      <IconPaperclip /> {message.attachment.fileName}
                     </a>
                   )}
                 </div>
@@ -401,7 +473,9 @@ const QueryConversationModal: React.FC<QueryConversationModalProps> = ({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50 px-6 py-2">
-              <span className="text-xs font-medium text-slate-500">📎 Attachments</span>
+              <span className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                <IconPaperclip /> Attachments
+              </span>
               {attachments.map((att, idx) => (
                 <button
                   key={`${att.fileName}-${idx}`}
@@ -409,7 +483,7 @@ const QueryConversationModal: React.FC<QueryConversationModalProps> = ({
                   onClick={() => setAttachments((prev) => prev.filter((_, i) => i !== idx))}
                   className="inline-flex items-center gap-1 rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs text-teal-700"
                 >
-                  📎 {att.fileName} ✕
+                  <IconPaperclip /> {att.fileName} ✕
                 </button>
               ))}
               <label className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-teal-400 px-3 py-1 text-xs text-teal-600 hover:bg-teal-50">
@@ -435,11 +509,22 @@ const QueryConversationModal: React.FC<QueryConversationModalProps> = ({
                 </button>
                 <button
                   type="button"
+                  onClick={handleExportEml}
+                  className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 flex items-center justify-center gap-1.5"
+                >
+                  Export Draft (.eml)
+                </button>
+                <button
+                  type="button"
                   disabled={sending}
                   onClick={handleSend}
                   className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-60"
                 >
-                  {sending ? 'Sending…' : 'Send Reply ✉️'}
+                  {sending ? 'Sending…' : (
+                    <>
+                      Send Reply <IconMail />
+                    </>
+                  )}
                 </button>
               </div>
             </div>

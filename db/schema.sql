@@ -1,25 +1,18 @@
 -- Postgres schema for CRM + Trips portal
 
-CREATE TYPE role_name AS ENUM ('ADMIN','EMPLOYEE','MANAGER','GM');
+CREATE TYPE role_name AS ENUM ('ADMIN','MANAGER','KAM');
 
 CREATE TYPE query_status AS ENUM ('OPEN','IN_PROGRESS','ESCALATED','CLOSED','REOPENED','PENDING_FROM_CLIENT');
 
 CREATE TYPE technology AS ENUM ('SOLAR','WIND','SOLAR_WIND','SOLAR_WIND_BATTERY','SOLAR_BATTERY','WIND_BATTERY');
 
-CREATE TYPE trip_status AS ENUM ('DRAFT','PENDING_APPROVAL','APPROVED','REJECTED','CANCELLED');
-
-CREATE TYPE request_type AS ENUM ('TRIP','CLIENT');
-
 CREATE TYPE request_status AS ENUM ('PENDING','APPROVED','REJECTED');
 
-CREATE TYPE owner_type AS ENUM ('QUERY','TRIP','CLIENT');
+CREATE TYPE owner_type AS ENUM ('QUERY','CLIENT');
 
 CREATE TABLE roles (
   id SERIAL PRIMARY KEY,
   name role_name UNIQUE NOT NULL,
-  travel_budget NUMERIC(10,2),
-  lodging_budget NUMERIC(10,2),
-  food_budget NUMERIC(10,2),
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -66,7 +59,7 @@ CREATE TABLE queries (
   id SERIAL PRIMARY KEY,
   query_code TEXT UNIQUE NOT NULL,
   client_id INT REFERENCES clients(id),
-  pss_id INT REFERENCES client_pss(id),
+  pss_id INT,
   query_raised_date TIMESTAMPTZ,
   query_entry_date TIMESTAMPTZ,
   state TEXT,
@@ -88,40 +81,6 @@ CREATE TABLE queries (
   expected_closure TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE trips (
-  id SERIAL PRIMARY KEY,
-  user_id INT NOT NULL REFERENCES users(id),
-  client_id INT NOT NULL REFERENCES clients(id),
-  from_date DATE NOT NULL,
-  to_date DATE NOT NULL,
-  reason TEXT NOT NULL,
-  is_meeting BOOLEAN NOT NULL DEFAULT FALSE,
-  status trip_status NOT NULL DEFAULT 'PENDING_APPROVAL',
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE requests (
-  id SERIAL PRIMARY KEY,
-  request_type request_type NOT NULL,
-  status request_status NOT NULL DEFAULT 'PENDING',
-  requester_id INT NOT NULL REFERENCES users(id),
-  trip_id INT REFERENCES trips(id),
-  client_id INT REFERENCES clients(id),
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE trip_approvals (
-  id SERIAL PRIMARY KEY,
-  trip_id INT NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
-  approver_id INT NOT NULL REFERENCES users(id),
-  sequence INT NOT NULL,
-  decision request_status NOT NULL DEFAULT 'PENDING',
-  comment TEXT,
-  decided_at TIMESTAMPTZ
 );
 
 CREATE TABLE query_approvals (
@@ -158,6 +117,13 @@ CREATE TABLE query_replies (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+CREATE TABLE query_reply_attachments (
+  reply_id INT NOT NULL REFERENCES query_replies(id) ON DELETE CASCADE,
+  attachment_id INT NOT NULL REFERENCES attachments(id) ON DELETE CASCADE,
+  PRIMARY KEY (reply_id, attachment_id)
+);
+
+
 CREATE TABLE notifications (
   id SERIAL PRIMARY KEY,
   user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -177,4 +143,7 @@ CREATE TABLE assignment_state (
 );
 
 INSERT INTO assignment_state (id) VALUES (1);
+
+CREATE INDEX IF NOT EXISTS idx_attachments_owner ON attachments(owner_type, owner_id);
+
 

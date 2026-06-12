@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import { authHeaders } from '../pages/_app';
-import QueryConversationModal from './QueryConversationModal';
 
 interface NotificationItem {
   id: number;
@@ -12,10 +12,10 @@ interface NotificationItem {
 }
 
 const NotificationBell: React.FC = () => {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [threadQueryId, setThreadQueryId] = useState<number | null>(null);
 
   const load = async () => {
     try {
@@ -52,7 +52,7 @@ const NotificationBell: React.FC = () => {
       load();
     }
     if (notification.queryId) {
-      setThreadQueryId(notification.queryId);
+      router.push(`/queries/reply?id=${notification.queryId}`);
       setOpen(false);
     }
   };
@@ -126,11 +126,6 @@ const NotificationBell: React.FC = () => {
           </div>
         )}
       </div>
-      <QueryConversationModal
-        queryId={threadQueryId}
-        canReply={false}
-        onClose={() => setThreadQueryId(null)}
-      />
     </>
   );
 };

@@ -179,7 +179,14 @@ async function importPssFromExcel(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
+import { getSessionUser } from '../../../lib/auth/session';
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const user = await getSessionUser(req);
+  if (!user || user.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
   if (req.method === 'GET') {
     const { clientId } = req.query;
     const hasClient = clientId != null;

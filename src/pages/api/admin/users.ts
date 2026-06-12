@@ -31,7 +31,14 @@ function mapUser(row: UserRow): UserResponse {
   };
 }
 
+import { getSessionUser } from '../../../lib/auth/session';
+
 	export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const user = await getSessionUser(req);
+  if (!user || user.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
 	  if (req.method === 'GET') {
     const result = await query<UserRow>(
       `SELECT u.id,
