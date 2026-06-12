@@ -18,10 +18,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const isKam = user.role === 'KAM';
     const params: number[] = [];
-    const whereClause = isKam ? 'WHERE q.raised_by_id = $1' : '';
-    if (isKam) {
+    let whereClause = '';
+
+    if (user.role === 'KAM') {
+      whereClause = 'WHERE q.raised_by_id = $1';
+      params.push(user.id);
+    } else if (user.role === 'MANAGER') {
+      // All queries raised by any KAM, plus queries the manager created.
+      whereClause = `WHERE q.raised_by_id IN (
+        SELECT u.id
+          FROM users u
+          JOIN roles r ON r.id = u.role_id
+         WHERE r.name = 'KAM' OR u.id = $1
+      )`;
       params.push(user.id);
     }
 

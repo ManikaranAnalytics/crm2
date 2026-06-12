@@ -2,7 +2,21 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import { authHeaders, useAuth } from '../_app';
+import { exportDraftEml } from '../../lib/exportEml';
 import { formatQueryStatus, isQueryResolved, statusBadgeClass } from '../../lib/queryStatus';
+
+const formatTechnology = (value?: string | null): string => {
+  if (!value) return '—';
+  return value
+    .split('_')
+    .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
+    .join(' ');
+};
+
+const displayValue = (value?: string | number | null): string => {
+  if (value === null || value === undefined || value === '') return '—';
+  return String(value);
+};
 
 const IconPaperclip = () => (
   <svg className="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
@@ -77,7 +91,9 @@ interface AttachmentPayload {
 const ReplyPage: React.FC = () => {
   const { user } = useAuth();
   const router = useRouter();
-  const { id } = router.query;
+  const { id, source: sourceParam } = router.query;
+  const source = Array.isArray(sourceParam) ? sourceParam[0] : sourceParam;
+  const isInboxMode = source === 'inbox';
 
   const [thread, setThread] = useState<QueryThread | null>(null);
   const [parsedMsg, setParsedMsg] = useState<ParsedMsg | null>(null);
@@ -231,55 +247,13 @@ const ReplyPage: React.FC = () => {
   };
 
   const handleExportEml = () => {
-    if (!replyBody.trim()) {
-      alert('Please enter a response body before exporting.');
-      return;
-    }
-
-    const to = parsedMsg?.senderEmail || 'client@example.com';
-    const subject = `RE: ${parsedMsg?.subject || thread?.queryCode || 'Query Response'}`;
-    const boundary = `----=_NextPart_${Math.random().toString(36).substring(2)}`;
-    
-    const headers = [
-      `To: ${to}`,
-      `Subject: ${subject}`,
-      `X-Unsent: 1`,
-      `MIME-Version: 1.0`,
-      `Content-Type: multipart/mixed; boundary="${boundary}"`,
-      '',
-      `--${boundary}`,
-      `Content-Type: text/html; charset=utf-8`,
-      `Content-Transfer-Encoding: 7bit`,
-      '',
-      `<html><body>${replyBody.replace(/\n/g, '<br>')}</body></html>`,
-    ];
-
-    const attachmentBlocks = attachments.map(att => {
-      return [
-        `--${boundary}`,
-        `Content-Type: ${att.contentType || 'application/octet-stream'}; name="${att.fileName}"`,
-        `Content-Transfer-Encoding: base64`,
-        `Content-Disposition: attachment; filename="${att.fileName}"`,
-        '',
-        att.dataBase64
-      ].join('\r\n');
+    exportDraftEml({
+      to: parsedMsg?.senderEmail,
+      subject: `RE: ${parsedMsg?.subject || thread?.queryCode || 'Query Response'}`,
+      body: replyBody,
+      attachments,
+      downloadFileName: thread?.queryCode || 'draft',
     });
-
-    const fullEml = [
-      ...headers,
-      ...attachmentBlocks,
-      `--${boundary}--`
-    ].join('\r\n');
-
-    const blob = new Blob([fullEml], { type: 'message/rfc822' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${(thread?.queryCode || 'draft').replace(/[^a-z0-9]/gi, '_')}.eml`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
   };
 
   if (!user) {
@@ -316,7 +290,46 @@ const ReplyPage: React.FC = () => {
 
   return (
     <Layout>
-      {/* Query Metadata Overview Banner */}
+      {/* Query metadata — read-only details from the queries table */}
+      <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm mb-6">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-4">Query Details</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
+          <div>
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">PSS Name</span>
+            <span className="text-sm font-medium text-slate-800">{displayValue(thread.pssText)}</span>
+          </div>
+          <div>
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Client Name</span>
+            <span className="text-sm font-medium text-slate-800">{displayValue(thread.clientName)}</span>
+          </div>
+          <div>
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">State</span>
+            <span className="text-sm font-medium text-slate-800">{displayValue(thread.state)}</span>
+          </div>
+          <div>
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Capacity (MW)</span>
+            <span className="text-sm font-medium text-slate-800">{displayValue(thread.capacityMw)}</span>
+          </div>
+          <div>
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Technology</span>
+            <span className="text-sm font-medium text-slate-800">{formatTechnology(thread.technology)}</span>
+          </div>
+          <div>
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Transmission Type</span>
+            <span className="text-sm font-medium text-slate-800">{displayValue(thread.transmissionType)}</span>
+          </div>
+          <div>
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Issue Period</span>
+            <span className="text-sm font-medium text-slate-800">{displayValue(thread.periodOfIssue)}</span>
+          </div>
+          <div className="sm:col-span-2 lg:col-span-4">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Issue</span>
+            <span className="text-sm font-medium text-slate-800 whitespace-pre-wrap">{displayValue(thread.issue)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Query summary banner */}
       <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm mb-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div>
           <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Query Code</span>
@@ -371,110 +384,112 @@ const ReplyPage: React.FC = () => {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 text-left">
         {/* LEFT COLUMN: Mail Drafter & Conversation History */}
         <div className="space-y-6">
-          {/* Main Action Block - Reply Editor */}
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h2 className="text-base font-bold text-slate-800">
-                Compose Response
-              </h2>
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusBadgeClass(thread.status)}`}>
-                {formatQueryStatus(thread.status)}
-              </span>
-            </div>
-
-            {success && (
-              <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
-                {success}
-              </p>
-            )}
-
-            {error && (
-              <p className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">
-                {error}
-              </p>
-            )}
-
-            {resolved ? (
-              <div className="rounded-lg bg-slate-50 p-4 text-center border border-slate-200">
-                <p className="text-sm text-slate-500 font-medium">This query has been resolved.</p>
-                <p className="text-xs text-slate-400 mt-1">No further replies can be sent.</p>
+          {!isInboxMode && (
+            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h2 className="text-base font-bold text-slate-800">Compose Response</h2>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusBadgeClass(thread.status)}`}>
+                  {formatQueryStatus(thread.status)}
+                </span>
               </div>
-            ) : (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Message Body</label>
-                  <textarea
-                    value={replyBody}
-                    onChange={(e) => setReplyBody(e.target.value)}
-                    placeholder="Draft your response here..."
-                    className="min-h-[220px] w-full resize-y rounded border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                  />
-                </div>
 
-                <div className="border-t border-slate-100 pt-3">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
-                    <IconPaperclip /> Attachments
-                  </label>
-                  <div className="flex flex-wrap items-center gap-2 mt-1">
-                    {attachments.map((att, idx) => (
-                      <button
-                        key={`${att.fileName}-${idx}`}
-                        type="button"
-                        onClick={() => setAttachments((prev) => prev.filter((_, i) => i !== idx))}
-                        className="inline-flex items-center gap-1 rounded-full border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs text-teal-700 hover:bg-teal-100"
-                      >
-                        <IconPaperclip /> {att.fileName} ✕
-                      </button>
-                    ))}
-                    <label className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-teal-400 px-3 py-1 text-xs text-teal-600 hover:bg-teal-50">
-                      + Add File
-                      <input
-                        type="file"
-                        multiple
-                        className="hidden"
-                        onChange={(e) => handleFilesChange(e.target.files)}
-                      />
+              {success && (
+                <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
+                  {success}
+                </p>
+              )}
+
+              {error && (
+                <p className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">
+                  {error}
+                </p>
+              )}
+
+              {resolved ? (
+                <div className="rounded-lg bg-slate-50 p-4 text-center border border-slate-200">
+                  <p className="text-sm text-slate-500 font-medium">This query has been resolved.</p>
+                  <p className="text-xs text-slate-400 mt-1">No further replies can be sent.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Message Body</label>
+                    <textarea
+                      value={replyBody}
+                      onChange={(e) => setReplyBody(e.target.value)}
+                      placeholder="Draft your response here..."
+                      className="min-h-[220px] w-full resize-y rounded border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                    />
+                  </div>
+
+                  <div className="border-t border-slate-100 pt-3">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
+                      <IconPaperclip /> Attachments
                     </label>
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                      {attachments.map((att, idx) => (
+                        <button
+                          key={`${att.fileName}-${idx}`}
+                          type="button"
+                          onClick={() => setAttachments((prev) => prev.filter((_, i) => i !== idx))}
+                          className="inline-flex items-center gap-1 rounded-full border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs text-teal-700 hover:bg-teal-100"
+                        >
+                          <IconPaperclip /> {att.fileName} ✕
+                        </button>
+                      ))}
+                      <label className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-dashed border-teal-400 px-3 py-1 text-xs text-teal-600 hover:bg-teal-50">
+                        + Add File
+                        <input
+                          type="file"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => handleFilesChange(e.target.files)}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleExportEml}
+                      className="rounded border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 flex items-center justify-center gap-1.5"
+                    >
+                      Export Draft (.eml)
+                    </button>
+                    <button
+                      type="button"
+                      disabled={sending}
+                      onClick={handleSend}
+                      className="rounded bg-teal-600 px-5 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-60 flex items-center"
+                    >
+                      {sending ? 'Sending...' : (
+                        <>
+                          Send Reply <IconMail />
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
+              )}
+            </div>
+          )}
 
-                <div className="flex justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => router.back()}
-                    className="rounded border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleExportEml}
-                    className="rounded border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 flex items-center justify-center gap-1.5"
-                  >
-                    Export Draft (.eml)
-                  </button>
-                  <button
-                    type="button"
-                    disabled={sending}
-                    onClick={handleSend}
-                    className="rounded bg-teal-600 px-5 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-60 flex items-center"
-                  >
-                    {sending ? 'Sending...' : (
-                      <>
-                        Send Reply <IconMail />
-                      </>
-                    )}
-                  </button>
-                </div>
+          <div className={`space-y-4 ${isInboxMode ? 'rounded-lg border border-slate-200 bg-white p-5 shadow-sm' : ''}`}>
+            {isInboxMode ? (
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h2 className="text-base font-bold text-slate-800">
+                  Conversation Thread ({replies.length} replies)
+                </h2>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusBadgeClass(thread.status)}`}>
+                  {formatQueryStatus(thread.status)}
+                </span>
               </div>
+            ) : (
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+                Conversation Thread ({replies.length} replies)
+              </h3>
             )}
-          </div>
-
-          {/* Conversation History */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-              Conversation Thread ({replies.length} replies)
-            </h3>
             <div className="space-y-3">
               {replies.length === 0 ? (
                 <p className="text-xs text-slate-400 italic">No replies have been sent yet.</p>
@@ -513,9 +528,9 @@ const ReplyPage: React.FC = () => {
 
         {/* RIGHT COLUMN: Outlook-style .msg File Preview */}
         <div className="space-y-6">
-          <div className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col h-full min-h-[600px]">
+          <div className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col max-h-[80vh]">
             {/* Header section representing an email client window */}
-            <div className="bg-slate-100 border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+            <div className="flex-shrink-0 bg-slate-100 border-b border-slate-200 px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-rose-400"></span>
                 <span className="w-3 h-3 rounded-full bg-amber-400"></span>
@@ -542,9 +557,9 @@ const ReplyPage: React.FC = () => {
                 <p className="text-sm">Reading compound OLE Outlook file...</p>
               </div>
             ) : parsedMsg ? (
-              <div className="flex-1 flex flex-col">
-                {/* Email Header Panel */}
-                <div className="bg-slate-50/50 p-4 border-b border-slate-150 space-y-2 text-sm">
+              <div className="flex flex-1 min-h-0 flex-col">
+                {/* Email Header Panel — fixed at top */}
+                <div className="flex-shrink-0 bg-slate-50/50 p-4 border-b border-slate-150 space-y-2 text-sm">
                   <div>
                     <span className="font-semibold text-slate-500 mr-2">From:</span>
                     <span className="font-medium text-slate-800">{parsedMsg.senderName}</span>{' '}
@@ -562,13 +577,13 @@ const ReplyPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* Email Body Content */}
-                <div className="flex-1 p-6 overflow-y-auto whitespace-pre-wrap text-sm text-slate-700 font-sans leading-relaxed bg-white">
+                {/* Email Body Content — scrolls inside the preview box */}
+                <div className="flex-1 min-h-0 overflow-y-auto p-6 whitespace-pre-wrap text-sm text-slate-700 font-sans leading-relaxed bg-white">
                   {parsedMsg.body}
                 </div>
               </div>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center p-8 text-slate-400 text-center">
+              <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center p-8 text-slate-400 text-center">
                 <svg className="w-10 h-10 text-slate-300 mb-2" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                   <polyline points="22,6 12,13 2,6"></polyline>

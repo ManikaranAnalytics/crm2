@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import QueryTabs from '../../components/QueryTabs';
+import { getRepliesInboxRoute } from '../../lib/auth/roles';
 import { useAuth } from '../_app';
 
 interface QuerySummary {
@@ -36,6 +38,7 @@ const getStatusLabel = (status: string): string => {
 
 const AllQueriesPage: React.FC = () => {
   const { user } = useAuth();
+  const router = useRouter();
   const [queries, setQueries] = useState<QuerySummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +55,12 @@ const AllQueriesPage: React.FC = () => {
   const isAdmin = !!user && user.role === 'ADMIN';
   const isKam = !!user && user.role === 'KAM';
   const hasAccess = isAdmin || isKam;
+
+  useEffect(() => {
+    if (user?.role === 'KAM') {
+      router.replace(getRepliesInboxRoute());
+    }
+  }, [user, router]);
 
   useEffect(() => {
     if (!user || !hasAccess) return;

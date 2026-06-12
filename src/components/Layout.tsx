@@ -2,6 +2,7 @@ import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../pages/_app';
+import { getDefaultQueriesRoute } from '../lib/auth/roles';
 import NotificationBell from './NotificationBell';
 
 // Inline SVG Icon components to ensure zero external dependency issues
@@ -50,7 +51,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const role = user?.role;
   const canViewQueries = role && ['ADMIN', 'MANAGER', 'KAM'].includes(role);
   const canViewAdmin = role === 'ADMIN';
-  const queriesHref = role === 'KAM' ? '/queries/new' : '/queries/assign';
+  const queriesHref = role ? getDefaultQueriesRoute(role) : '/queries/assign';
 
   const getPageHeader = () => {
     const path = router.pathname;
@@ -81,7 +82,18 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     if (path === '/queries/replies-inbox') {
       return {
         title: 'Query Replies',
-        subtitle: role === 'KAM' ? 'Replies received on your queries' : 'Showing all queries with replies',
+        subtitle:
+          role === 'KAM'
+            ? 'Replies received on queries you created'
+            : role === 'MANAGER'
+              ? 'Replies on queries from all KAMs and your own queries'
+              : 'Showing all queries with replies',
+      };
+    }
+    if (path === '/queries/reply') {
+      return {
+        title: 'Reply to Query',
+        subtitle: 'Review query details and compose a response.',
       };
     }
     if (path === '/queries/today-solved') {

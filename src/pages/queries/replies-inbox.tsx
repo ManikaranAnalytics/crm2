@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import QueryTabs from '../../components/QueryTabs';
+import { exportDraftEml, fetchAttachmentAsEmlPayload } from '../../lib/exportEml';
 import { authHeaders, useAuth } from '../_app';
 
 interface ReplyItem {
@@ -43,7 +44,6 @@ const RepliesInboxPage: React.FC = () => {
   const [searchCode, setSearchCode] = useState('');
 
   const canView = !!user && ['ADMIN', 'MANAGER', 'KAM'].includes(user.role);
-  const showRaisedBy = !!user && (user.role === 'ADMIN' || user.role === 'MANAGER');
   const showAdminFilters = !!user && (user.role === 'ADMIN' || user.role === 'MANAGER');
 
   useEffect(() => {
@@ -125,10 +125,30 @@ const RepliesInboxPage: React.FC = () => {
     setSearchCode('');
   };
 
-  const subtitle =
-    user?.role === 'KAM'
-      ? 'Replies received on your queries'
-      : 'Showing all queries with replies';
+  const handleExportEml = async (
+    e: React.MouseEvent,
+    meta: ReplyItem,
+    latest: ReplyItem,
+  ) => {
+    e.stopPropagation();
+
+    const attachments = [];
+    if (latest.attachment_url && latest.attachment_name) {
+      const att = await fetchAttachmentAsEmlPayload(
+        latest.attachment_url,
+        latest.attachment_name,
+        user?.id,
+      );
+      if (att) attachments.push(att);
+    }
+
+    exportDraftEml({
+      subject: `RE: ${meta.query_code}`,
+      body: latest.reply_body,
+      attachments,
+      downloadFileName: meta.query_code,
+    });
+  };
 
   if (!user) {
     return (
@@ -148,115 +168,58 @@ const RepliesInboxPage: React.FC = () => {
 
   return (
     <Layout>
-      <style>{`
-        .inbox-page { font-family: Arial, sans-serif; color: #1e293b; }
-        .inbox-title { font-size: 24px; font-weight: bold; margin: 0 0 4px 0; }
-        .inbox-subtitle { font-size: 14px; color: #64748b; margin: 0 0 16px 0; }
-        .filter-bar {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 12px;
-          align-items: flex-end;
-          margin-bottom: 16px;
-          padding: 16px;
-          background: #fff;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
-        .filter-bar label { display: block; font-size: 12px; color: #64748b; margin-bottom: 4px; }
-        .filter-control {
-          border: 1px solid #cbd5e1;
-          border-radius: 4px;
-          padding: 6px 10px;
-          font-size: 14px;
-          color: #1e293b;
-        }
-        .count-badge {
-          display: inline-flex;
-          align-items: center;
-          border-radius: 9999px;
-          background: #f0fdfa;
-          padding: 2px 10px;
-          font-size: 12px;
-          font-weight: 500;
-          color: #0f766e;
-          margin-bottom: 12px;
-        }
-        .table-wrap {
-          overflow: hidden;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          background: #fff;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
-        .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        .data-table th {
-          background: #0f766e;
-          color: white;
-          text-align: left;
-          padding: 10px 12px;
-          font-size: 13px;
-          border: 1px solid #334155;
-        }
-        .data-table td {
-          padding: 10px 12px;
-          border: 1px solid #e2e8f0;
-        }
-        .data-table tr:nth-child(even) td { background: #f9f9f9; }
-        .data-table tr:nth-child(odd) td { background: white; }
-        .data-table tbody tr.clickable { cursor: pointer; }
-        .data-table tbody tr.clickable:hover td { background: #f1f5f9; }
-        .query-code { font-family: monospace; font-size: 12px; font-weight: 600; color: #0f766e; }
-        .date-cell { font-size: 12px; color: #64748b; }
-        .status-msg { padding: 24px; text-align: center; color: #64748b; font-size: 14px; }
-        .error-msg { color: #b91c1c; margin-bottom: 12px; font-size: 14px; }
-      `}</style>
-
-      <div className="inbox-page">
+      <div className="space-y-4">
         <QueryTabs active="REPLIES" />
 
-        <div className="filter-bar">
+        <div className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div>
-            <label htmlFor="searchCode">Search Code</label>
+            <label htmlFor="searchCode" className="block text-xs font-medium text-slate-500">
+              Search Code
+            </label>
             <input
               id="searchCode"
               type="text"
               placeholder="Search by Query Code..."
               value={searchCode}
               onChange={(e) => setSearchCode(e.target.value)}
-              className="filter-control border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+              className="mt-1 rounded-md border border-slate-200 px-2 py-1.5 text-sm text-slate-800"
             />
           </div>
           <div>
-            <label htmlFor="dateFrom">Date From</label>
+            <label htmlFor="dateFrom" className="block text-xs font-medium text-slate-500">
+              Date From
+            </label>
             <input
               id="dateFrom"
               type="date"
-              className="filter-control"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
+              className="mt-1 rounded-md border border-slate-200 px-2 py-1.5 text-sm text-slate-800"
             />
           </div>
           <div>
-            <label htmlFor="dateTo">Date To</label>
+            <label htmlFor="dateTo" className="block text-xs font-medium text-slate-500">
+              Date To
+            </label>
             <input
               id="dateTo"
               type="date"
-              className="filter-control"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
+              className="mt-1 rounded-md border border-slate-200 px-2 py-1.5 text-sm text-slate-800"
             />
           </div>
           {showAdminFilters && (
             <>
               <div>
-                <label htmlFor="generatedBy">Generated by</label>
+                <label htmlFor="generatedBy" className="block text-xs font-medium text-slate-500">
+                  Generated by
+                </label>
                 <select
                   id="generatedBy"
-                  className="filter-control"
                   value={filterGenBy}
                   onChange={(e) => setFilterGenBy(e.target.value)}
+                  className="mt-1 rounded-md border border-slate-200 px-2 py-1.5 text-sm text-slate-800"
                 >
                   <option value="">All</option>
                   {uniqueGeneratedBy.map((name) => (
@@ -267,12 +230,14 @@ const RepliesInboxPage: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label htmlFor="solvedBy">Solved by</label>
+                <label htmlFor="solvedBy" className="block text-xs font-medium text-slate-500">
+                  Solved by
+                </label>
                 <select
                   id="solvedBy"
-                  className="filter-control"
                   value={filterSolvedBy}
                   onChange={(e) => setFilterSolvedBy(e.target.value)}
+                  className="mt-1 rounded-md border border-slate-200 px-2 py-1.5 text-sm text-slate-800"
                 >
                   <option value="">All</option>
                   {uniqueSolvedBy.map((name) => (
@@ -301,58 +266,110 @@ const RepliesInboxPage: React.FC = () => {
           </button>
         </div>
 
-        <span className="count-badge">{filteredRows.length} queries</span>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700">
+            {filteredRows.length} with replies
+          </span>
+          <span className="text-xs text-slate-500">{filteredRows.length} queries</span>
+        </div>
 
-        {error && <p className="error-msg">{error}</p>}
-
-        <div className="table-wrap">
-          {loading && <p className="status-msg">Loading replies…</p>}
-
-          {!loading && filteredRows.length === 0 && !error && (
-            <p className="status-msg">No replies received yet.</p>
+        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          {error && (
+            <p className="border-b border-slate-100 bg-red-50 px-4 py-2 text-sm text-red-700">
+              {error}
+            </p>
           )}
-
-          {!loading && filteredRows.length > 0 && (
-            <table className="data-table">
-              <thead>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
+              <thead className="bg-[#0f766e]">
                 <tr>
-                  <th className="px-4 py-2 text-left">S.No.</th>
-                  <th>Query Code</th>
-                  <th>Client</th>
-                  <th>Generated by</th>
-                  <th>Solved by</th>
-                  <th>Date</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
+                    S.No.
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
+                    Query Code
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
+                    Client
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
+                    Generated by
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
+                    Solved by
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
+                    Date
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
+                    Actions
+                  </th>
                 </tr>
               </thead>
-              <tbody>
-                {filteredRows.map(({ meta, replies: queryReplies }, index) => {
-                  const latest = queryReplies[0];
-                  return (
-                    <tr
-                      key={meta.query_id}
-                      className="clickable"
-                      onClick={() => router.push(`/queries/reply?id=${meta.query_id}`)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          router.push(`/queries/reply?id=${meta.query_id}`);
-                        }
-                      }}
-                      tabIndex={0}
-                      role="button"
-                    >
-                      <td className="px-4 py-2">{index + 1}</td>
-                      <td className="query-code">{meta.query_code}</td>
-                      <td>{cell(meta.client_name)}</td>
-                      <td>{cell(meta.raised_by)}</td>
-                      <td>{cell(latest.replied_by)}</td>
-                      <td className="date-cell">{formatDate(latest.replied_at)}</td>
-                    </tr>
-                  );
-                })}
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {loading && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-6 text-center text-sm text-slate-500">
+                      Loading replies…
+                    </td>
+                  </tr>
+                )}
+                {!loading && filteredRows.length === 0 && !error && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-6 text-center text-sm text-slate-500">
+                      No replies received yet.
+                    </td>
+                  </tr>
+                )}
+                {!loading &&
+                  filteredRows.map(({ meta, replies: queryReplies }, index) => {
+                    const latest = queryReplies[0];
+                    return (
+                      <tr
+                        key={meta.query_id}
+                        className="cursor-pointer border-l-2 border-l-transparent transition-colors hover:bg-slate-50"
+                        onClick={() => router.push(`/queries/reply?id=${meta.query_id}&source=inbox`)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            router.push(`/queries/reply?id=${meta.query_id}&source=inbox`);
+                          }
+                        }}
+                        tabIndex={0}
+                        role="button"
+                      >
+                        <td className="px-4 py-2 text-slate-800">{index + 1}</td>
+                        <td className="px-4 py-2 font-mono text-xs font-semibold text-teal-700">
+                          {meta.query_code}
+                        </td>
+                        <td className="px-4 py-2 text-slate-800">{cell(meta.client_name)}</td>
+                        <td className="px-4 py-2 text-slate-700">{cell(meta.raised_by)}</td>
+                        <td className="px-4 py-2 text-slate-700">{cell(latest.replied_by)}</td>
+                        <td className="px-4 py-2 text-slate-700">
+                          <span className="text-xs text-slate-500">{formatDate(latest.replied_at)}</span>
+                        </td>
+                        <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            className="mr-2 inline-flex items-center rounded border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-700 hover:bg-teal-100"
+                            onClick={() => router.push(`/queries/reply?id=${meta.query_id}&source=inbox`)}
+                          >
+                            Reply
+                          </button>
+                          <button
+                            type="button"
+                            className="inline-flex items-center rounded border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+                            onClick={(e) => handleExportEml(e, meta, latest)}
+                          >
+                            Export Draft (.eml)
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
-          )}
+          </div>
         </div>
       </div>
     </Layout>

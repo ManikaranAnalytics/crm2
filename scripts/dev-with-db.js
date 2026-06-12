@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const EmbeddedPostgres = require('embedded-postgres').default;
+const { Client } = require('pg');
 
 const ROOT = path.join(__dirname, '..');
 const DB_DIR = path.join(ROOT, '.local-postgres');
@@ -44,6 +45,43 @@ async function startDatabase() {
   }
 
   fs.writeFileSync(ENV_FILE, `DATABASE_URL=${DATABASE_URL}\n`, 'utf8');
+}
+
+async function ensureDatabaseInitialized() {
+  const client = new Client({ connectionString: DATABASE_URL });
+  await client.connect();
+
+  const tableCheck = await client.query(
+    "SELECT to_regclass('public.queries') AS queries_table",
+  );
+  await client.end();
+
+  if (tableCheck.rows[0]?.queries_table) {
+    return;
+  }
+
+  console.log('Database not initialized; applying schema and demo seed data...');
+
+  const schemaSql = fs.readFileSync(
+    path.join(ROOT, 'db', 'schema.sql'),
+    'utf8',
+  );
+  const schemaClient = new Client({ connectionString: DATABASE_URL });
+  await schemaClient.connect();
+  await schemaClient.query(schemaSql);
+  await schemaClient.end();
+  console.log('Applied db/schema.sql');
+
+  for (const script of ['seed-demo-users.js', 'seed-demo-clients.js']) {
+    const result = spawnSync(process.execPath, [path.join(__dirname, script)], {
+      cwd: ROOT,
+      stdio: 'inherit',
+      env: { ...process.env, DATABASE_URL },
+    });
+    if (result.status !== 0) {
+      throw new Error(`Failed while running scripts/${script}`);
+    }
+  }
 }
 
 function startNextDev() {
@@ -91,6 +129,7 @@ process.on('SIGTERM', () => shutdown(0));
 
 async function main() {
   await startDatabase();
+  await ensureDatabaseInitialized();
   console.log(`Database ready at ${DATABASE_URL}`);
   startNextDev();
 }

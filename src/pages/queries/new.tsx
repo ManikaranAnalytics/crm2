@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Layout from '../../components/Layout';
 import QueryTabs from '../../components/QueryTabs';
+import { exportDraftEml } from '../../lib/exportEml';
 import { authHeaders, useAuth } from '../_app';
 
 interface PssOption {
@@ -166,6 +167,22 @@ interface PssOption {
 		e.preventDefault();
 	};
 
+	const getIssueValue = (): string =>
+		form.issueType === 'HIGH_DSM'
+			? 'High DSM'
+			: form.issueOtherText.trim() || 'Other';
+
+	const handleExportEml = () => {
+		const issueValue = getIssueValue();
+		const subjectParts = [form.pssText, form.clientName].filter(Boolean);
+		exportDraftEml({
+			subject: subjectParts[0] || 'New Query',
+			body: issueValue,
+			attachments: attachment ? [attachment] : [],
+			downloadFileName: subjectParts[0] || 'new_query_draft',
+		});
+	};
+
 		const handleSubmit = async (e: React.FormEvent) => {
 			e.preventDefault();
 			setMessage(null);
@@ -184,10 +201,7 @@ interface PssOption {
 			}
 			setSubmitting(true);
 		try {
-			const issueValue =
-				form.issueType === 'HIGH_DSM'
-					? 'High DSM'
-					: form.issueOtherText.trim() || 'Other';
+			const issueValue = getIssueValue();
 			const periodOfIssue =
 					form.issueStartDate && form.issueEndDate
 						? `${form.issueStartDate} to ${form.issueEndDate}`
@@ -487,13 +501,22 @@ interface PssOption {
 							</div>
 						</div> */}
 
-						<button
-							type="submit"
-							disabled={submitting}
-							className="inline-flex items-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70"
-						>
-							{submitting ? 'Saving...' : 'Save Query'}
-						</button>
+						<div className="flex flex-wrap items-center gap-3">
+							<button
+								type="submit"
+								disabled={submitting}
+								className="inline-flex items-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70"
+							>
+								{submitting ? 'Saving...' : 'Save Query'}
+							</button>
+							<button
+								type="button"
+								onClick={handleExportEml}
+								className="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 shadow-sm hover:bg-indigo-100"
+							>
+								Export Draft (.eml)
+							</button>
+						</div>
 
 						{message && !error && <p className="text-sm text-teal-700">{message}</p>}
 					</form>
