@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { useAuth } from '../pages/_app';
-import { getRepliesInboxRoute } from '../lib/auth/roles';
 
 type TabKey = 'ADD' | 'ASSIGN' | 'MY' | 'ALL' | 'TODAY' | 'REPLIES';
 
@@ -50,7 +49,7 @@ const QueryTabs: React.FC<QueryTabsProps> = ({ active }) => {
           </Link>
         )}
         {canViewReplies && (
-          <Link href={getRepliesInboxRoute()} className={`${tabBase} ${tabClass('REPLIES')}`}>
+          <Link href="/queries/replies-inbox" className={`${tabBase} ${tabClass('REPLIES')}`}>
             Query Replies
           </Link>
         )}

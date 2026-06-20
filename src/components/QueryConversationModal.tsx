@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { authHeaders } from '../pages/_app';
+import QueryDetailsPanel from './QueryDetailsPanel';
+import { authHeaders, useAuth } from '../pages/_app';
 import { formatQueryStatus, isQueryResolved, statusBadgeClass } from '../lib/queryStatus';
+import type { QueryThread } from '../services/queryService';
 
 const IconPaperclip = () => (
   <svg className="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
@@ -22,37 +24,6 @@ const IconClose = () => (
   </svg>
 );
 
-export interface QueryThreadMessage {
-  id: string;
-  type: 'ORIGINAL' | 'REPLY';
-  authorName: string;
-  authorRole?: string;
-  body: string;
-  createdAt: string;
-  attachment?: { fileName: string; url: string };
-  attachments?: { fileName: string; url: string }[];
-}
-
-export interface QueryThread {
-  queryId: number;
-  queryCode: string;
-  issue: string;
-  raisedBy?: string;
-  assignedTo?: string;
-  status: string;
-  closedDate?: string;
-  originalAttachment?: { fileName: string; url: string };
-  messages: QueryThreadMessage[];
-  clientName?: string;
-  state?: string;
-  capacityMw?: number | null;
-  technology?: string | null;
-  transmissionType?: string | null;
-  periodOfIssue?: string | null;
-  queryRaisedDate?: string | null;
-  pssText?: string | null;
-}
-
 interface AttachmentPayload {
   fileName: string;
   dataBase64: string;
@@ -72,20 +43,40 @@ const QueryConversationModal: React.FC<QueryConversationModalProps> = ({
   onClose,
   onReplySent,
 }) => {
+  const { user } = useAuth();
   const [thread, setThread] = useState<QueryThread | null>(null);
+  const [parsedMsg, setParsedMsg] = useState<{
+    subject: string;
+    body: string;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [replyBody, setReplyBody] = useState('');
   const [attachments, setAttachments] = useState<AttachmentPayload[]>([]);
   const [sending, setSending] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(true);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+
+  const loadParsedMsg = async (filename: string) => {
+    try {
+      const res = await fetch(
+        `/api/attachments/parse-msg?filename=${encodeURIComponent(filename)}&actorId=${user?.id}`,
+        { headers: authHeaders() },
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setParsedMsg({ subject: data.subject || '', body: data.body || '' });
+      }
+    } catch {
+      /* ignore */
+    }
+  };
 
   const loadThread = useCallback(async () => {
     if (!queryId) return;
     setLoading(true);
     setError(null);
+    setParsedMsg(null);
     try {
       const res = await fetch(`/api/queries/replies?queryId=${queryId}`, {
         headers: authHeaders(),
@@ -96,12 +87,24 @@ const QueryConversationModal: React.FC<QueryConversationModalProps> = ({
       }
       const data = await res.json();
       setThread(data.thread);
+
+      const originalMsg = data.thread?.messages?.find(
+        (m: { type: string }) => m.type === 'ORIGINAL',
+      );
+      const msgAttachment =
+        originalMsg?.attachments?.find((a: { url: string }) =>
+          a.url.toLowerCase().endsWith('.msg'),
+        ) || originalMsg?.attachment;
+      if (msgAttachment?.url?.toLowerCase().endsWith('.msg')) {
+        const filename = msgAttachment.url.replace('/api/attachments/', '');
+        loadParsedMsg(filename);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load conversation');
     } finally {
       setLoading(false);
     }
-  }, [queryId]);
+  }, [queryId, user?.id]);
 
   useEffect(() => {
     if (!queryId) return;
@@ -277,67 +280,7 @@ const QueryConversationModal: React.FC<QueryConversationModalProps> = ({
           )}
 
           {thread && (
-            <div className="mb-4 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
-              <button
-                type="button"
-                onClick={() => setDetailsOpen((o) => !o)}
-                className="flex w-full items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500"
-              >
-                Query Details
-                <span className="text-slate-400">{detailsOpen ? '▲' : '▼'}</span>
-              </button>
-              {detailsOpen && (
-                <div
-                  className="mt-2"
-                  style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px 24px' }}
-                >
-                  <div>
-                    <div className="text-xs text-slate-400">Client</div>
-                    <div className="text-sm font-medium text-slate-700">{thread.clientName ?? '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-400">PSS</div>
-                    <div className="text-sm font-medium text-slate-700">{thread.pssText ?? '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-400">Capacity</div>
-                    <div className="text-sm font-medium text-slate-700">
-                      {thread.capacityMw != null && thread.capacityMw !== 0
-                        ? `${thread.capacityMw} MW`
-                        : '—'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-400">State</div>
-                    <div className="text-sm font-medium text-slate-700">{thread.state ?? '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-400">Technology</div>
-                    <div className="text-sm font-medium text-slate-700">{thread.technology ?? '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-400">Transmission</div>
-                    <div className="text-sm font-medium text-slate-700">
-                      {thread.transmissionType ?? '—'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-400">Period of Issue</div>
-                    <div className="text-sm font-medium text-slate-700">
-                      {thread.periodOfIssue ?? '—'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-400">Raised by</div>
-                    <div className="text-sm font-medium text-slate-700">{thread.raisedBy ?? '—'}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-400">Assigned to</div>
-                    <div className="text-sm font-medium text-slate-700">{thread.assignedTo ?? '—'}</div>
-                  </div>
-                </div>
-              )}
-            </div>
+            <QueryDetailsPanel thread={thread} compact />
           )}
 
           {loading && <p className="text-sm text-slate-500">Loading conversation...</p>}
@@ -430,7 +373,7 @@ const QueryConversationModal: React.FC<QueryConversationModalProps> = ({
                   {message.attachments?.map((att, idx) => (
                     <a
                       key={`multi-${idx}`}
-                      href={att.url}
+                      href={user ? `${att.url}?actorId=${user.id}` : att.url}
                       target="_blank"
                       rel="noreferrer"
                       className="mt-2 inline-flex items-center text-xs text-indigo-600 hover:underline"
@@ -440,7 +383,7 @@ const QueryConversationModal: React.FC<QueryConversationModalProps> = ({
                   ))}
                   {message.attachment && (
                     <a
-                      href={message.attachment.url}
+                      href={user ? `${message.attachment.url}?actorId=${user.id}` : message.attachment.url}
                       target="_blank"
                       rel="noreferrer"
                       className="mt-2 inline-flex items-center text-xs text-indigo-600 hover:underline"

@@ -1,6 +1,6 @@
 -- Postgres schema for CRM + Trips portal
 
-CREATE TYPE role_name AS ENUM ('ADMIN','MANAGER','KAM');
+CREATE TYPE role_name AS ENUM ('ADMIN', 'EMPLOYEE', 'MANAGER', 'KAM', 'GM');
 
 CREATE TYPE query_status AS ENUM ('OPEN','IN_PROGRESS','ESCALATED','CLOSED','REOPENED','PENDING_FROM_CLIENT');
 

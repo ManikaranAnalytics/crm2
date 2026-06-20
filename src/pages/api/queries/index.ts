@@ -35,7 +35,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 	        return res.status(401).json({ error: 'Not authenticated' });
 	      }
 
-	      // ADMIN and KAM users should be able to view all queries regardless of assignment.
 	      const roleResult = await query<{ role_name: string }>(
 	        `SELECT r.name AS role_name
 	           FROM users u
@@ -44,15 +43,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 	        [actorId],
 	      );
 	      const roleName = roleResult.rows[0]?.role_name;
-	      if (!roleName || (roleName !== 'ADMIN' && roleName !== 'KAM')) {
-	        return res.status(403).json({ error: 'Only admin and KAM can view all queries' });
+	      if (!roleName) {
+	        return res.status(403).json({ error: 'Not authorized' });
 	      }
 
+	      if (roleName === 'ADMIN') {
+	        const queries = await listQueries();
+	        return res.status(200).json({ queries });
+	      }
+	      if (roleName === 'KAM') {
+	        const queries = await listQueries({ raisedById: actorId });
+	        return res.status(200).json({ queries });
+	      }
+
+	      return res.status(403).json({ error: 'Only admin and KAM can view queries here' });
+	    }
+
+	    if (!user) {
+	      return res.status(401).json({ error: 'Not authenticated' });
+	    }
+
+	    if (user.role === 'KAM') {
+	      const queries = await listQueries({ raisedById: user.id });
+	      return res.status(200).json({ queries });
+	    }
+	    if (user.role === 'ADMIN' || user.role === 'MANAGER') {
 	      const queries = await listQueries();
 	      return res.status(200).json({ queries });
 	    }
-	    const queries = await listQueries();
-	    return res.status(200).json({ queries });
+
+	    return res.status(403).json({ error: 'Not authorized' });
   }
 
   if (req.method === 'POST') {

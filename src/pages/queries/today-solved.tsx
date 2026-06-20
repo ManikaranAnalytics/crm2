@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import QueryTabs from '../../components/QueryTabs';
 import { authHeaders, useAuth } from '../_app';
@@ -39,6 +40,7 @@ const formatDate = (iso: string | undefined): string => {
 
 const TodaySolvedPage: React.FC = () => {
   const { user } = useAuth();
+  const router = useRouter();
   const [queries, setQueries] = useState<TodaySolvedQuery[]>([]);
   const [allQueries, setAllQueries] = useState<TodaySolvedQuery[]>([]);
   const [loading, setLoading] = useState(true);
@@ -289,7 +291,19 @@ const TodaySolvedPage: React.FC = () => {
                 )}
                 {!loading &&
                   queries.map((q, index) => (
-                    <tr key={q.id} className="border-l-2 border-l-transparent transition-colors hover:bg-slate-50">
+                    <tr
+                      key={q.id}
+                      className="cursor-pointer border-l-2 border-l-transparent transition-colors hover:bg-slate-50"
+                      onClick={() => router.push(`/queries/reply?id=${q.id}`)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          router.push(`/queries/reply?id=${q.id}`);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                    >
                       <td className="px-4 py-2 text-slate-800">{index + 1}</td>
                       <td className="px-4 py-2 font-mono text-xs font-semibold text-teal-700">
                         {q.queryCode}

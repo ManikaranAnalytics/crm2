@@ -3,7 +3,11 @@ import fs from 'fs';
 import path from 'path';
 import { getSessionUser } from '../../../lib/auth/session';
 import { query } from '../../../lib/db';
-import { createQueryReply, getQueryThread } from '../../../services/queryService';
+import {
+  canUserAccessQueryThread,
+  createQueryReply,
+  getQueryThread,
+} from '../../../services/queryService';
 
 export const config = {
   api: {
@@ -27,6 +31,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
+      const allowed = await canUserAccessQueryThread(queryId, user.id, user.role);
+      if (!allowed) {
+        return res.status(403).json({ error: 'You are not authorized to view this query thread' });
+      }
+
       const thread = await getQueryThread(queryId);
       if (!thread) return res.status(404).json({ error: 'Query not found' });
       return res.status(200).json({ thread });

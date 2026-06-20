@@ -82,11 +82,25 @@ export async function listNotifications(userId: number): Promise<NotificationRec
     is_read: boolean;
     created_at: string;
   }>(
-    `SELECT id, query_id, reply_id, type, title, message, is_read, created_at
-       FROM notifications
-      WHERE user_id = $1
-      ORDER BY created_at DESC
-      LIMIT 100`,
+    `WITH unread AS (
+       SELECT id, query_id, reply_id, type, title, message, is_read, created_at
+         FROM notifications
+        WHERE user_id = $1 AND is_read = FALSE
+     ),
+     recent_read AS (
+       SELECT id, query_id, reply_id, type, title, message, is_read, created_at
+         FROM notifications
+        WHERE user_id = $1 AND is_read = TRUE
+        ORDER BY created_at DESC
+        LIMIT 3
+     )
+     SELECT id, query_id, reply_id, type, title, message, is_read, created_at
+       FROM (
+         SELECT * FROM unread
+         UNION ALL
+         SELECT * FROM recent_read
+       ) visible
+      ORDER BY created_at DESC`,
     [userId],
   );
 

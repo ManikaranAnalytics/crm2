@@ -69,8 +69,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }
     if (path === '/queries/all') {
       return {
-        title: role === 'KAM' ? 'Query Replies' : 'All Queries',
-        subtitle: role === 'KAM' ? 'Showing all queries and replies.' : 'All technical queries across clients, regardless of raiser or assignee.',
+        title: 'All Queries',
+        subtitle: 'All technical queries across clients, regardless of raiser or assignee.',
       };
     }
     if (path === '/queries/assign') {

@@ -58,11 +58,17 @@ export interface QueryRecord {
   attachments?: { fileName: string; url: string }[];
 }
 
-export async function listQueries(options?: { forUserId?: number }): Promise<QueryRecord[]> {
+export async function listQueries(options?: {
+  forUserId?: number;
+  raisedById?: number;
+}): Promise<QueryRecord[]> {
   const params: any[] = [];
   let whereClause = '';
 
-  if (options?.forUserId) {
+  if (options?.raisedById) {
+    whereClause = 'WHERE q.raised_by_id = $1';
+    params.push(options.raisedById);
+  } else if (options?.forUserId) {
     whereClause = 'WHERE q.responsibility_to_id = $1';
     params.push(options.forUserId);
   }
@@ -387,6 +393,7 @@ export interface QueryThread {
   status: string;
   closedDate?: string;
   originalAttachment?: { fileName: string; url: string };
+  originalAttachments?: { fileName: string; url: string; contentType?: string }[];
   messages: QueryThreadMessage[];
   clientName?: string;
   state?: string;
@@ -395,7 +402,31 @@ export interface QueryThread {
   transmissionType?: string | null;
   periodOfIssue?: string | null;
   queryRaisedDate?: string | null;
+  queryEntryDate?: string | null;
+  createdAt?: string | null;
   pssText?: string | null;
+  pssId?: number | null;
+  group?: string | null;
+  delay?: string | null;
+  expectedClosure?: string | null;
+}
+
+export async function canUserAccessQueryThread(
+  queryId: number,
+  userId: number,
+  role: string,
+): Promise<boolean> {
+  if (role === 'ADMIN' || role === 'MANAGER') {
+    return true;
+  }
+  if (role !== 'KAM') {
+    return false;
+  }
+  const result = await query<{ raised_by_id: number | null }>(
+    `SELECT raised_by_id FROM queries WHERE id = $1`,
+    [queryId],
+  );
+  return result.rows[0]?.raised_by_id === userId;
 }
 
 export async function getQueryThread(queryId: number): Promise<QueryThread | null> {
@@ -414,9 +445,13 @@ export async function getQueryThread(queryId: number): Promise<QueryThread | nul
     transmission_type: string | null;
     period_of_issue: string | null;
     query_raised_date: string | null;
+    query_entry_date: string | null;
+    created_at: string | null;
     pss_text: string | null;
-    original_file_name: string | null;
-    original_file_path: string | null;
+    pss_id: number | null;
+    group_name: string | null;
+    delay: string | null;
+    expected_closure: string | null;
   }>(
     `SELECT q.id,
             q.query_code,
@@ -432,24 +467,40 @@ export async function getQueryThread(queryId: number): Promise<QueryThread | nul
             q.transmission_type,
             q.period_of_issue,
             q.query_raised_date,
+            q.query_entry_date,
+            q.created_at,
             q.pss_text,
-            a.file_name AS original_file_name,
-            a.file_path AS original_file_path
+            q.pss_id,
+            q."group" AS group_name,
+            q.delay,
+            q.expected_closure
        FROM queries q
        LEFT JOIN clients c ON c.id = q.client_id
-       LEFT JOIN LATERAL (
-         SELECT file_name, file_path
-           FROM attachments
-          WHERE owner_type = 'QUERY' AND owner_id = q.id
-          ORDER BY uploaded_at ASC
-          LIMIT 1
-       ) a ON TRUE
       WHERE q.id = $1`,
     [queryId],
   );
 
   const row = queryResult.rows[0];
   if (!row) return null;
+
+  const attachmentsResult = await query<{
+    file_name: string;
+    file_path: string;
+    content_type: string;
+  }>(
+    `SELECT file_name, file_path, content_type
+       FROM attachments
+      WHERE owner_type = 'QUERY' AND owner_id = $1
+      ORDER BY uploaded_at ASC`,
+    [queryId],
+  );
+
+  const originalAttachments = attachmentsResult.rows.map((att) => ({
+    fileName: att.file_name,
+    url: att.file_path,
+    contentType: att.content_type,
+  }));
+  const firstAttachment = originalAttachments[0];
 
   const repliesResult = await query<{
     id: number;
@@ -526,11 +577,13 @@ export async function getQueryThread(queryId: number): Promise<QueryThread | nul
       type: 'ORIGINAL',
       authorName: row.raised_by ?? 'Key Access Manager',
       body: row.issue,
-      createdAt: '',
-      attachment:
-        row.original_file_name && row.original_file_path
-          ? { fileName: row.original_file_name, url: row.original_file_path }
-          : undefined,
+      createdAt: row.query_entry_date ?? row.created_at ?? '',
+      attachment: firstAttachment
+        ? { fileName: firstAttachment.fileName, url: firstAttachment.url }
+        : undefined,
+      attachments: originalAttachments.length
+        ? originalAttachments.map((a) => ({ fileName: a.fileName, url: a.url }))
+        : undefined,
     },
     ...replyMessages,
   ];
@@ -550,11 +603,17 @@ export async function getQueryThread(queryId: number): Promise<QueryThread | nul
     transmissionType: row.transmission_type ?? null,
     periodOfIssue: row.period_of_issue ?? null,
     queryRaisedDate: row.query_raised_date ?? null,
+    queryEntryDate: row.query_entry_date ?? null,
+    createdAt: row.created_at ?? null,
     pssText: row.pss_text ?? null,
-    originalAttachment:
-      row.original_file_name && row.original_file_path
-        ? { fileName: row.original_file_name, url: row.original_file_path }
-        : undefined,
+    pssId: row.pss_id ?? null,
+    group: row.group_name ?? null,
+    delay: row.delay ?? null,
+    expectedClosure: row.expected_closure ?? null,
+    originalAttachment: firstAttachment
+      ? { fileName: firstAttachment.fileName, url: firstAttachment.url }
+      : undefined,
+    originalAttachments: originalAttachments.length ? originalAttachments : undefined,
     messages,
   };
 }

@@ -20,9 +20,9 @@ interface AssignedQuery {
 
 const rowAccentClass = (status: string): string => {
   if (status === 'IN_PROGRESS') return 'border-l-amber-400';
-  if (status === 'OPEN') return 'border-l-sky-400';
+  if (status === 'OPEN') return 'border-l-amber-400';
   if (status === 'CLOSED') return 'border-l-emerald-400';
-  return 'border-l-transparent';
+  return 'border-l-amber-400';
 };
 
 const AssignQueriesPage: React.FC = () => {
@@ -145,9 +145,13 @@ const AssignQueriesPage: React.FC = () => {
                   queries.map((q, index) => (
                     <tr
                       key={q.id}
-                      className={`border-l-2 ${rowAccentClass(q.status)} transition-colors hover:bg-slate-50`}
+                      className="transition-colors hover:bg-slate-50"
                     >
-                      <td className="px-4 py-2 text-slate-800">{index + 1}</td>
+                      <td
+                        className={`border-l-2 ${rowAccentClass(q.status)} px-4 py-2 text-slate-800`}
+                      >
+                        {index + 1}
+                      </td>
                       <td className="px-4 py-2 font-mono text-xs font-semibold text-teal-700">
                         {q.queryCode}
                       </td>

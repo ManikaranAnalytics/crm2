@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getSessionUser } from '../../../lib/auth/session';
 import {
+  countUnreadNotifications,
   listNotifications,
   markNotificationsRead,
 } from '../../../services/notificationService';
@@ -13,8 +14,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'GET') {
     try {
-      const notifications = await listNotifications(user.id);
-      const unreadCount = notifications.filter((n) => !n.isRead).length;
+      const [notifications, unreadCount] = await Promise.all([
+        listNotifications(user.id),
+        countUnreadNotifications(user.id),
+      ]);
       return res.status(200).json({ notifications, unreadCount });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to load notifications';
