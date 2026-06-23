@@ -96,6 +96,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         subtitle: 'Review query details and compose a response.',
       };
     }
+    if (path === '/queries/reply-history') {
+      return {
+        title: 'Query Replies',
+        subtitle: 'View sent replies and previous communications for this query.',
+      };
+    }
     if (path === '/queries/today-solved') {
       return {
         title: 'Solved Queries',

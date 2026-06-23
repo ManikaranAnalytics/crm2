@@ -292,11 +292,11 @@ const RepliesInboxPage: React.FC = () => {
                       <tr
                         key={meta.query_id}
                         className="cursor-pointer border-l-2 border-l-transparent transition-colors hover:bg-slate-50"
-                        onClick={() => router.push(`/queries/reply?id=${meta.query_id}`)}
+                        onClick={() => router.push(`/queries/reply-history?id=${meta.query_id}`)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            router.push(`/queries/reply?id=${meta.query_id}`);
+                            router.push(`/queries/reply-history?id=${meta.query_id}`);
                           }
                         }}
                         tabIndex={0}

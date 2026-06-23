@@ -44,7 +44,13 @@ const LoginPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="flex min-h-screen flex-col items-center justify-center p-6 bg-gradient-to-tr from-slate-50 via-teal-50/20 to-slate-50">
+      <div className="relative min-h-screen">
+        <div
+          className="absolute inset-0 bg-[url('/images/bg.png')] bg-cover bg-center bg-no-repeat"
+          aria-hidden="true"
+        />
+        <div className="absolute inset-0 bg-slate-900/45" aria-hidden="true" />
+        <div className="relative z-10 flex min-h-screen flex-col items-center justify-center p-6">
         
         {/* Logo and Brand Header */}
         <div className="mb-8 flex flex-col items-center gap-2">
@@ -120,6 +126,7 @@ const LoginPage: React.FC = () => {
           </form>
         </div>
 
+        </div>
       </div>
     </Layout>
   );
