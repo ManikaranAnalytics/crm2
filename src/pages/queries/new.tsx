@@ -345,9 +345,6 @@ interface PssOption {
 										No PSS matches. Ask a manager to add it in Admin.
 									</div>
 								)}
-								<p className="mt-1 text-[11px] text-slate-500">
-									Type to search. Selecting auto-fills State, Capacity, Technology, Transmission Type.
-								</p>
 							</div>
 							<div>
 								<label className="block text-sm font-medium text-slate-700" htmlFor="clientName">

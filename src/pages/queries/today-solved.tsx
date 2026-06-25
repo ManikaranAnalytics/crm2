@@ -161,7 +161,7 @@ const TodaySolvedPage: React.FC = () => {
   return (
     <Layout>
       <div className="space-y-4">
-        <QueryTabs active="TODAY" />
+        <QueryTabs active="ASSIGN" />
 
         <div className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div>

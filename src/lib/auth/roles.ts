@@ -14,7 +14,7 @@ export function getDefaultQueriesRoute(role: RoleName): string {
 }
 
 /** Query Replies tab destination — same for all roles that can view replies. */
-export function getRepliesInboxRoute(): string {
-  return '/queries/replies-inbox';
+export function getRepliesInboxRoute(scope: 'my' | 'all' = 'all'): string {
+  return scope === 'my' ? '/queries/replies-inbox?scope=my' : '/queries/replies-inbox';
 }
 

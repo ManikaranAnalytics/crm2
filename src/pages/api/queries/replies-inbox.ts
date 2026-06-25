@@ -36,6 +36,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       transmission_type: string | null;
       period_of_issue: string | null;
       query_raised_date: string | null;
+      query_entry_date: string | null;
+      query_created_at: string | null;
       pss_text: string | null;
       raised_by: string | null;
       client_name: string | null;
@@ -43,6 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       reply_body: string;
       replied_at: string;
       replied_by: string;
+      replied_by_id: number;
       replied_by_role: string;
       attachment_name: string | null;
       attachment_url: string | null;
@@ -56,6 +59,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               q.transmission_type,
               q.period_of_issue,
               q.query_raised_date,
+              q.query_entry_date,
+              q.created_at AS query_created_at,
               q.pss_text,
               q.raised_by,
               c.name AS client_name,
@@ -63,6 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               r.body AS reply_body,
               r.created_at AS replied_at,
               u.name AS replied_by,
+              u.id AS replied_by_id,
               roles.name AS replied_by_role,
               a.file_name AS attachment_name,
               a.file_path AS attachment_url
@@ -88,6 +94,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       transmission_type: row.transmission_type ?? undefined,
       period_of_issue: row.period_of_issue ?? undefined,
       query_raised_date: row.query_raised_date ?? undefined,
+      query_entry_date: row.query_entry_date ?? undefined,
+      query_created_at: row.query_created_at ?? undefined,
       pss_text: row.pss_text ?? undefined,
       raised_by: row.raised_by ?? undefined,
       client_name: row.client_name ?? undefined,
@@ -95,6 +103,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       reply_body: row.reply_body,
       replied_at: row.replied_at,
       replied_by: row.replied_by,
+      replied_by_id: row.replied_by_id,
       replied_by_role: row.replied_by_role,
       attachment_name: row.attachment_name ?? undefined,
       attachment_url: row.attachment_url ?? undefined,

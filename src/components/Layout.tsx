@@ -82,12 +82,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     if (path === '/queries/replies-inbox') {
       return {
         title: 'Query Replies',
-        subtitle:
-          role === 'KAM'
-            ? 'Replies received on queries you created'
-            : role === 'MANAGER'
-              ? 'Replies on queries from all KAMs and your own queries'
-              : 'Showing all queries with replies',
+        subtitle: 'Reply knowledge repository — discover past resolutions and reusable answers.',
       };
     }
     if (path === '/queries/reply') {
