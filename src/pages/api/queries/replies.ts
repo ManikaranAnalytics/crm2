@@ -33,11 +33,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const allowed = await canUserAccessQueryThread(queryId, user.id, user.role);
       if (!allowed) {
-        return res.status(403).json({ error: 'You are not authorized to view this query thread' });
+        return res.status(403).json({ error: 'You are not authorized to view this ticket thread' });
       }
 
       const thread = await getQueryThread(queryId);
-      if (!thread) return res.status(404).json({ error: 'Query not found' });
+      if (!thread) return res.status(404).json({ error: 'Ticket not found' });
       return res.status(200).json({ thread });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to load thread';
@@ -47,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'POST') {
     if (!['ADMIN', 'MANAGER'].includes(user.role)) {
-      return res.status(403).json({ error: 'You are not authorized to reply to queries' });
+      return res.status(403).json({ error: 'You are not authorized to reply to tickets' });
     }
 
     const { queryId, body, attachment, attachments } = req.body || {};
@@ -118,7 +118,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         replyId: result.replyId,
         status: result.status,
         closedDate: result.closedDate,
-        message: 'Query Resolved',
+        message: 'Ticket Resolved',
         thread,
       });
     } catch (err: unknown) {

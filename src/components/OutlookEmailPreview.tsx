@@ -125,7 +125,7 @@ const OutlookEmailPreview: React.FC<OutlookEmailPreviewProps> = ({ thread, actor
           <p className="text-sm font-semibold text-slate-600">No email preview available</p>
           {originalMsg?.body ? (
             <div className="mt-4 w-full max-w-md rounded border border-slate-200 bg-slate-50 p-4 text-left">
-              <p className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-400">Original query details</p>
+              <p className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-400">Original ticket details</p>
               <p className="whitespace-pre-wrap text-xs text-slate-600">{originalMsg.body}</p>
             </div>
           ) : null}

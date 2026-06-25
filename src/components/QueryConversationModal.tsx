@@ -169,7 +169,7 @@ const QueryConversationModal: React.FC<QueryConversationModalProps> = ({
       setThread(data.thread);
       setReplyBody('');
       setAttachments([]);
-      setSuccess(data.message || 'Query Resolved');
+      setSuccess(data.message || 'Ticket Resolved');
       onReplySent?.();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to send reply');
@@ -185,7 +185,7 @@ const QueryConversationModal: React.FC<QueryConversationModalProps> = ({
     }
 
     const to = 'client@example.com';
-    const subject = `RE: ${thread?.queryCode || 'Query Response'}`;
+    const subject = `RE: ${thread?.queryCode || 'Ticket Response'}`;
     const boundary = `----=_NextPart_${Math.random().toString(36).substring(2)}`;
     
     const headers = [
@@ -301,7 +301,7 @@ const QueryConversationModal: React.FC<QueryConversationModalProps> = ({
                       {message.type === 'ORIGINAL' ? (
                         <>
                           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">
-                            Original Query
+                            Original Ticket
                           </span>
                           <p className="text-sm font-semibold text-slate-800">
                             From: {message.authorName}
@@ -399,7 +399,7 @@ const QueryConversationModal: React.FC<QueryConversationModalProps> = ({
 
           {resolved && (
             <p className="text-center text-xs text-slate-500">
-              This query is resolved. The conversation is read-only.
+              This ticket is resolved. The conversation is read-only.
             </p>
           )}
         </div>

@@ -63,50 +63,54 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }
     if (path === '/queries/new') {
       return {
-        title: 'Queries',
-        subtitle: 'Add a new technical query.',
+        title: 'Tickets',
+        subtitle: 'Create a new technical ticket.',
       };
     }
     if (path === '/queries/all') {
       return {
-        title: 'All Queries',
-        subtitle: 'All technical queries across clients, regardless of raiser or assignee.',
+        title: 'All Tickets',
+        subtitle: 'All technical tickets across clients, regardless of raiser or assignee.',
       };
     }
     if (path === '/queries/assign') {
       return {
-        title: 'Reply to Queries',
-        subtitle: 'Active queries awaiting a reply. Any authorized team member can reply — the first reply resolves the query and notifies the creator.',
+        title: 'Respond to Tickets',
+        subtitle: 'Active tickets awaiting a reply. Any authorized team member can reply — the first reply resolves the ticket and notifies the creator.',
       };
     }
     if (path === '/queries/replies-inbox') {
+      const inboxScope = router.query.scope === 'my' ? 'my' : 'all';
       return {
-        title: 'Query Replies',
-        subtitle: 'Reply knowledge repository — discover past resolutions and reusable answers.',
+        title: inboxScope === 'my' ? 'My Tickets' : 'All Tickets',
+        subtitle:
+          inboxScope === 'my'
+            ? 'Tickets you created that have received a reply or been marked resolved.'
+            : 'All tickets that have received a reply or been marked resolved.',
       };
     }
     if (path === '/queries/reply') {
       return {
-        title: 'Reply to Query',
-        subtitle: 'Review query details and compose a response.',
+        title: 'Respond to Ticket',
+        subtitle: 'Review ticket details and compose a response.',
       };
     }
     if (path === '/queries/reply-history') {
       return {
-        title: 'Query Replies',
-        subtitle: 'View sent replies and previous communications for this query.',
+        title: 'Ticket Responses',
+        subtitle: 'View sent replies and previous communications for this ticket.',
       };
     }
     if (path === '/queries/today-solved') {
       return {
-        title: 'Solved Queries',
-        subtitle: 'All resolved queries with filters.',
+        title: 'Resolved Tickets',
+        subtitle: 'All resolved tickets with filters.',
       };
     }
     if (path === '/dashboard') {
       return {
         title: 'Dashboard',
-        subtitle: 'Overview of technical queries: volumes, status mix, team performance, and state-wise analysis.',
+        subtitle: 'Overview of technical tickets: volumes, status mix, team performance, and state-wise analysis.',
       };
     }
     return null;
@@ -219,7 +223,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <span className={router.pathname.startsWith('/queries') ? 'text-teal-700' : 'text-slate-400'}>
                 <IconQueries />
               </span>
-              {!collapsed && <span className="truncate">Queries</span>}
+              {!collapsed && <span className="truncate">Tickets</span>}
             </Link>
           )}
 

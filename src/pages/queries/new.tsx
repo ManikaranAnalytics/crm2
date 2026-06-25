@@ -16,6 +16,24 @@ interface PssOption {
 	transmissionType: 'STU' | 'CTU' | null;
 }
 
+interface ClientOption {
+	id: number;
+	name: string;
+	state: string | null;
+	isApproved: boolean;
+	pssCount: number;
+}
+
+interface ClientPssOption {
+	id: number;
+	clientId: number;
+	name: string;
+	state: string | null;
+	capacityMw: number | null;
+	technology: string | null;
+	transmissionType: 'STU' | 'CTU' | null;
+}
+
 	type IssueType = 'HIGH_DSM' | 'OTHER';
 	// type InitialStatus = 'OPEN' | 'CLOSED';
 
@@ -23,6 +41,7 @@ interface PssOption {
 		const { user } = useAuth();
 		const canAddQuery = !!user && ['ADMIN', 'MANAGER', 'KAM'].includes(user.role);
 		const [form, setForm] = useState({
+			clientId: '' as string,
 			clientName: '',
 			pssId: '' as string,
 			pssText: '',
@@ -36,6 +55,12 @@ interface PssOption {
 			issueOtherText: '',
 			// status: 'OPEN' as InitialStatus,
 		});
+	const [clientList, setClientList] = useState<ClientOption[]>([]);
+	const [clientPssList, setClientPssList] = useState<ClientPssOption[]>([]);
+	const [clientQuery, setClientQuery] = useState('');
+	const [clientOpen, setClientOpen] = useState(false);
+	const [clientHighlight, setClientHighlight] = useState(0);
+	const [loadingClientPss, setLoadingClientPss] = useState(false);
 	const [pssList, setPssList] = useState<PssOption[]>([]);
 	const [pssQuery, setPssQuery] = useState('');
 	const [pssOpen, setPssOpen] = useState(false);
@@ -50,6 +75,7 @@ interface PssOption {
 	const [submitting, setSubmitting] = useState(false);
 	const [loadingLookups, setLoadingLookups] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
+	const clientBoxRef = useRef<HTMLDivElement | null>(null);
 	const pssBoxRef = useRef<HTMLDivElement | null>(null);
 
 	useEffect(() => {
@@ -57,11 +83,18 @@ interface PssOption {
 			setLoadingLookups(true);
 			setError(null);
 			try {
-				const pssRes = await fetch('/api/pss-master');
+				const [pssRes, clientsRes] = await Promise.all([
+					fetch('/api/pss-master', { headers: authHeaders() }),
+					fetch('/api/clients', { headers: authHeaders() }),
+				]);
 				if (!pssRes.ok) {
 					throw new Error('Failed to load PSS list');
 				}
+				if (!clientsRes.ok) {
+					throw new Error('Failed to load client list');
+				}
 				const pssData = await pssRes.json();
+				const clientsData = await clientsRes.json();
 				setPssList(
 					(pssData.pss || []).map((p: any) => ({
 						id: p.id,
@@ -72,6 +105,15 @@ interface PssOption {
 						type: p.type ?? null,
 						technology: p.technology ?? null,
 						transmissionType: p.transmissionType ?? null,
+					})),
+				);
+				setClientList(
+					(clientsData.clients || []).map((c: any) => ({
+						id: c.id,
+						name: c.name,
+						state: c.state ?? null,
+						isApproved: !!c.isApproved,
+						pssCount: c.pssCount ?? 0,
 					})),
 				);
 			} catch (err: any) {
@@ -85,7 +127,53 @@ interface PssOption {
 	}, []);
 
 	useEffect(() => {
+		if (!form.clientId) {
+			setClientPssList([]);
+			return;
+		}
+
+		let cancelled = false;
+		const loadClientPss = async () => {
+			setLoadingClientPss(true);
+			try {
+				const res = await fetch(`/api/client-pss?clientId=${form.clientId}`, {
+					headers: authHeaders(),
+				});
+				if (!res.ok) {
+					throw new Error('Failed to load PSS for selected client');
+				}
+				const data = await res.json();
+				if (!cancelled) {
+					setClientPssList(
+						(data.pss || []).map((p: any) => ({
+							id: p.id,
+							clientId: p.clientId,
+							name: p.name,
+							state: p.state ?? null,
+							capacityMw: p.capacityMw ?? null,
+							technology: p.technology ?? null,
+							transmissionType: p.transmissionType ?? null,
+						})),
+					);
+				}
+			} catch {
+				if (!cancelled) setClientPssList([]);
+			} finally {
+				if (!cancelled) setLoadingClientPss(false);
+			}
+		};
+
+		loadClientPss();
+		return () => {
+			cancelled = true;
+		};
+	}, [form.clientId]);
+
+	useEffect(() => {
 		const handleDocClick = (e: MouseEvent) => {
+			if (clientBoxRef.current && !clientBoxRef.current.contains(e.target as Node)) {
+				setClientOpen(false);
+			}
 			if (pssBoxRef.current && !pssBoxRef.current.contains(e.target as Node)) {
 				setPssOpen(false);
 			}
@@ -94,13 +182,74 @@ interface PssOption {
 		return () => document.removeEventListener('mousedown', handleDocClick);
 	}, []);
 
+	const filteredClients = useMemo(() => {
+		const q = clientQuery.trim().toLowerCase();
+		const list = q
+			? clientList.filter((c) => c.name.toLowerCase().includes(q))
+			: clientList;
+		return list.slice(0, 100);
+	}, [clientList, clientQuery]);
+
+	const activePssSource = form.clientId && clientPssList.length > 0 ? 'client' : 'master';
+
 	const filteredPss = useMemo(() => {
 		const q = pssQuery.trim().toLowerCase();
-		const list = q
-			? pssList.filter((p) => p.name.toLowerCase().includes(q))
-			: pssList;
+		if (activePssSource === 'client') {
+			const list = q
+				? clientPssList.filter((p) => p.name.toLowerCase().includes(q))
+				: clientPssList;
+			return list.slice(0, 100);
+		}
+		const list = q ? pssList.filter((p) => p.name.toLowerCase().includes(q)) : pssList;
 		return list.slice(0, 100);
-	}, [pssList, pssQuery]);
+	}, [activePssSource, clientPssList, pssList, pssQuery]);
+
+	const selectClient = (c: ClientOption) => {
+		setForm((prev) => ({
+			...prev,
+			clientId: String(c.id),
+			clientName: c.name,
+			pssId: '',
+			pssText: '',
+			state: '',
+			capacityMw: '',
+			technology: '',
+			transmissionType: '',
+		}));
+		setClientQuery(c.name);
+		setClientOpen(false);
+		setPssQuery('');
+	};
+
+	const selectClientPss = (p: ClientPssOption) => {
+		const masterMatch = pssList.find((m) => m.name.toLowerCase() === p.name.toLowerCase());
+		setForm((prev) => ({
+			...prev,
+			pssId: masterMatch ? String(masterMatch.id) : String(p.id),
+			pssText: p.name,
+			state: p.state ?? masterMatch?.state ?? '',
+			capacityMw:
+				p.capacityMw != null
+					? String(p.capacityMw)
+					: masterMatch?.capacityMw != null
+						? String(masterMatch.capacityMw)
+						: '',
+			technology: p.technology ?? masterMatch?.technology ?? '',
+			transmissionType: p.transmissionType ?? masterMatch?.transmissionType ?? '',
+		}));
+		setPssQuery(p.name);
+		setPssOpen(false);
+	};
+
+	const pickPssAtIndex = (idx: number) => {
+		const pick = filteredPss[idx];
+		if (!pick) return;
+		if (activePssSource === 'client') {
+			selectClientPss(pick as ClientPssOption);
+		} else {
+			selectPss(pick as PssOption);
+		}
+	};
 
 	const selectPss = (p: PssOption) => {
 		setForm((prev) => ({
@@ -177,7 +326,7 @@ interface PssOption {
 		const issueValue = getIssueValue();
 		const subjectParts = [form.pssText, form.clientName].filter(Boolean);
 		exportDraftEml({
-			subject: subjectParts[0] || 'New Query',
+			subject: subjectParts[0] || 'New Ticket',
 			body: issueValue,
 			attachments: attachment ? [attachment] : [],
 			downloadFileName: subjectParts[0] || 'new_query_draft',
@@ -197,7 +346,7 @@ interface PssOption {
 			}
 			// Require the original client email (.msg or .eml) for every new query
 			if (!attachment) {
-				setError('Please attach the client email (.msg or .eml) before saving the query.');
+				setError('Please attach the client email (.msg or .eml) before saving the ticket.');
 				return;
 			}
 			setSubmitting(true);
@@ -208,6 +357,7 @@ interface PssOption {
 						? `${form.issueStartDate} to ${form.issueEndDate}`
 						: undefined;
 				const payload: any = {
+				clientId: form.clientId ? Number(form.clientId) : undefined,
 				clientName: form.clientName.trim() || undefined,
 				pssId: form.pssId ? Number(form.pssId) : undefined,
 				pssText: form.pssText || undefined,
@@ -227,11 +377,11 @@ interface PssOption {
 			});
 			if (!res.ok) {
 				const body = await res.json().catch(() => ({}));
-				throw new Error(body.error || 'Failed to create query');
+				throw new Error(body.error || 'Failed to create ticket');
 			}
-			setMessage('Query created successfully');
+			setMessage('Ticket created successfully');
 		} catch (err: any) {
-			setError(err.message || 'Failed to create query');
+			setError(err.message || 'Failed to create ticket');
 		} finally {
 			setSubmitting(false);
 		}
@@ -241,8 +391,8 @@ interface PssOption {
 			return (
 				<Layout>
 					<div className="space-y-4">
-						<h2 className="text-2xl font-semibold text-slate-900">Queries</h2>
-						<p className="text-sm text-slate-500">Please sign in to add a query.</p>
+						<h2 className="text-2xl font-semibold text-slate-900">Tickets</h2>
+						<p className="text-sm text-slate-500">Please sign in to create a ticket.</p>
 					</div>
 				</Layout>
 			);
@@ -252,8 +402,8 @@ interface PssOption {
 			return (
 				<Layout>
 					<div className="space-y-4">
-						<h2 className="text-2xl font-semibold text-slate-900">Queries</h2>
-						<p className="text-sm text-slate-500">You are not authorized to add queries.</p>
+						<h2 className="text-2xl font-semibold text-slate-900">Tickets</h2>
+						<p className="text-sm text-slate-500">You are not authorized to create tickets.</p>
 					</div>
 				</Layout>
 			);
@@ -274,16 +424,115 @@ interface PssOption {
 							</p>
 						)}
 						<div className="grid gap-4 md:grid-cols-2">
+							<div ref={clientBoxRef} className="relative">
+								<label className="block text-sm font-medium text-slate-700" htmlFor="client">
+									Client
+								</label>
+								<input
+									id="client"
+									type="text"
+									autoComplete="off"
+									value={clientQuery}
+									placeholder={loadingLookups ? 'Loading clients…' : 'Search client by name'}
+									onChange={(e) => {
+										setClientQuery(e.target.value);
+										setClientOpen(true);
+										setClientHighlight(0);
+										if (form.clientId) {
+											setForm((prev) => ({
+												...prev,
+												clientId: '',
+												clientName: e.target.value,
+												pssId: '',
+												pssText: '',
+												state: '',
+												capacityMw: '',
+												technology: '',
+												transmissionType: '',
+											}));
+											setPssQuery('');
+										} else {
+											setForm((prev) => ({ ...prev, clientName: e.target.value }));
+										}
+									}}
+									onFocus={() => setClientOpen(true)}
+									onKeyDown={(e) => {
+										if (!clientOpen && (e.key === 'ArrowDown' || e.key === 'Enter')) {
+											setClientOpen(true);
+											return;
+										}
+										if (e.key === 'ArrowDown') {
+											e.preventDefault();
+											setClientHighlight((h) => Math.min(h + 1, filteredClients.length - 1));
+										} else if (e.key === 'ArrowUp') {
+											e.preventDefault();
+											setClientHighlight((h) => Math.max(h - 1, 0));
+										} else if (e.key === 'Enter') {
+											e.preventDefault();
+											const pick = filteredClients[clientHighlight];
+											if (pick) selectClient(pick);
+										} else if (e.key === 'Escape') {
+											setClientOpen(false);
+										}
+									}}
+									disabled={loadingLookups}
+									className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:bg-slate-50"
+								/>
+								{clientOpen && filteredClients.length > 0 && (
+									<ul className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border border-slate-200 bg-white py-1 text-sm shadow-lg">
+										{filteredClients.map((c, idx) => (
+											<li
+												key={c.id}
+												onMouseDown={(e) => {
+													e.preventDefault();
+													selectClient(c);
+												}}
+												onMouseEnter={() => setClientHighlight(idx)}
+												className={`cursor-pointer px-3 py-1.5 ${
+													idx === clientHighlight ? 'bg-teal-50 text-teal-800' : 'text-slate-700 hover:bg-slate-50'
+												}`}
+											>
+												<div className="font-medium">{c.name}</div>
+												<div className="text-[11px] text-slate-500">
+													{[c.state, c.pssCount ? `${c.pssCount} PSS` : null, c.isApproved ? 'Approved' : 'Pending']
+														.filter(Boolean)
+														.join(' · ')}
+												</div>
+											</li>
+										))}
+									</ul>
+								)}
+								{clientOpen && !loadingLookups && filteredClients.length === 0 && (
+									<div className="absolute z-20 mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 shadow-lg">
+										No clients found. Ask an admin to add clients in Admin.
+									</div>
+								)}
+							</div>
 							<div ref={pssBoxRef} className="relative">
 								<label className="block text-sm font-medium text-slate-700" htmlFor="pss">
 									PSS
+									{form.clientId && (
+										<span className="ml-1 text-[11px] font-normal text-slate-500">
+											{loadingClientPss
+												? '(loading client PSS…)'
+												: clientPssList.length > 0
+													? '(from client PSS)'
+													: '(from PSS master)'}
+										</span>
+									)}
 								</label>
 								<input
 									id="pss"
 									type="text"
 									autoComplete="off"
 									value={pssQuery}
-									placeholder={loadingLookups ? 'Loading PSS list…' : 'Search PSS by name'}
+									placeholder={
+										loadingLookups || loadingClientPss
+											? 'Loading PSS list…'
+											: form.clientId
+												? 'Search PSS for selected client'
+												: 'Search PSS by name'
+									}
 									onChange={(e) => {
 										setPssQuery(e.target.value);
 										setPssOpen(true);
@@ -308,23 +557,26 @@ interface PssOption {
 											setPssHighlight((h) => Math.max(h - 1, 0));
 										} else if (e.key === 'Enter') {
 											e.preventDefault();
-											const pick = filteredPss[pssHighlight];
-											if (pick) selectPss(pick);
+											pickPssAtIndex(pssHighlight);
 										} else if (e.key === 'Escape') {
 											setPssOpen(false);
 										}
 									}}
-									disabled={loadingLookups}
+									disabled={loadingLookups || loadingClientPss}
 									className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:bg-slate-50"
 								/>
 								{pssOpen && filteredPss.length > 0 && (
 									<ul className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border border-slate-200 bg-white py-1 text-sm shadow-lg">
-										{filteredPss.map((p, idx) => (
+										{filteredPss.map((p, idx) => {
+											const isClientPss = activePssSource === 'client';
+											const clientPss = p as ClientPssOption;
+											const masterPss = p as PssOption;
+											return (
 											<li
-												key={p.id}
+												key={`${activePssSource}-${p.id}`}
 												onMouseDown={(e) => {
 													e.preventDefault();
-													selectPss(p);
+													pickPssAtIndex(idx);
 												}}
 												onMouseEnter={() => setPssHighlight(idx)}
 												className={`cursor-pointer px-3 py-1.5 ${
@@ -333,33 +585,27 @@ interface PssOption {
 											>
 												<div className="font-medium">{p.name}</div>
 												<div className="text-[11px] text-slate-500">
-													{[p.state, p.capacityMw != null ? `${p.capacityMw} MW` : null, p.type, p.transmissionType]
+													{[
+														p.state,
+														p.capacityMw != null ? `${p.capacityMw} MW` : null,
+														isClientPss ? clientPss.technology : masterPss.type,
+														isClientPss ? clientPss.transmissionType : masterPss.transmissionType,
+													]
 														.filter(Boolean)
 														.join(' · ')}
 												</div>
 											</li>
-										))}
+											);
+										})}
 									</ul>
 								)}
-								{pssOpen && !loadingLookups && filteredPss.length === 0 && (
+								{pssOpen && !loadingLookups && !loadingClientPss && filteredPss.length === 0 && (
 									<div className="absolute z-20 mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 shadow-lg">
-										No PSS matches. Ask a manager to add it in Admin.
+										{form.clientId
+											? 'No PSS linked to this client. Select from PSS master or add in Admin.'
+											: 'No PSS matches. Ask a manager to add it in Admin.'}
 									</div>
 								)}
-							</div>
-							<div>
-								<label className="block text-sm font-medium text-slate-700" htmlFor="clientName">
-									Client Name
-								</label>
-								<input
-									id="clientName"
-									name="clientName"
-									type="text"
-									value={form.clientName}
-									onChange={handleChange}
-									className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
-									placeholder="Enter client name"
-								/>
 							</div>
 							<div>
 								<label className="block text-sm font-medium text-slate-700" htmlFor="state">
@@ -505,7 +751,7 @@ interface PssOption {
 								disabled={submitting}
 								className="inline-flex items-center rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70"
 							>
-								{submitting ? 'Saving...' : 'Save Query'}
+								{submitting ? 'Saving...' : 'Save Ticket'}
 							</button>
 							<button
 								type="button"
@@ -523,7 +769,7 @@ interface PssOption {
 						<div>
 							<h3 className="text-sm font-semibold text-slate-900">Attach email (.msg or .eml)</h3>
 							<p className="mt-1 text-xs text-slate-500">
-								Drag and drop the email (.msg or .eml) related to this query, or click to browse.
+								Drag and drop the email (.msg or .eml) related to this ticket, or click to browse.
 								Himanshu will be able to download and review it while assigning/approving.
 							</p>
 						</div>

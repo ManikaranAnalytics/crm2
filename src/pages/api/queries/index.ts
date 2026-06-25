@@ -57,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 	        return res.status(200).json({ queries });
 	      }
 
-	      return res.status(403).json({ error: 'Only admin and KAM can view queries here' });
+	      return res.status(403).json({ error: 'Only admin and KAM can view tickets here' });
 	    }
 
 	    if (!user) {
@@ -103,7 +103,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		      if (!attachment || !attachment.dataBase64 || !attachment.fileName) {
 		        return res
 		          .status(400)
-		          .json({ error: 'Client email (.msg or .eml) attachment is required to create a query' });
+		          .json({ error: 'Client email (.msg or .eml) attachment is required to create a ticket' });
 		      }
 		      if (
 		        typeof attachment.fileName !== 'string' ||
@@ -159,7 +159,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 	      return res.status(201).json({ query: created });
     } catch (err: any) {
-      return res.status(400).json({ error: err.message || 'Failed to create query' });
+      return res.status(400).json({ error: err.message || 'Failed to create ticket' });
     }
   }
 

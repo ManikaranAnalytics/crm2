@@ -44,8 +44,8 @@ export async function notifyQueryAssigned(
     userId: assigneeId,
     queryId,
     type: 'QUERY_ASSIGNED',
-    title: 'New query assigned',
-    message: `Query ${queryCode} has been automatically assigned to you.`,
+    title: 'New ticket assigned',
+    message: `Ticket ${queryCode} has been automatically assigned to you.`,
   });
 }
 

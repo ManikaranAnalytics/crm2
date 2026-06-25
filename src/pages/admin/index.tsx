@@ -699,7 +699,7 @@ interface ClientPssItem {
 
   const permissions = [
     {
-      key: 'Manage queries',
+      key: 'Manage tickets',
       allowedRoles: CAN_MANAGE_QUERIES,
     },
     {
@@ -1654,7 +1654,7 @@ interface ClientPssItem {
             <div>
               <h3 className="text-sm font-semibold text-slate-900">Master PSS list</h3>
               <p className="mt-1 text-xs text-slate-500">
-                Shared PSS catalog used by the &quot;Add query&quot; page. Seeded from
+                Shared PSS catalog used by the &quot;Create ticket&quot; page. Seeded from
                 <code className="mx-1 rounded bg-slate-100 px-1">Copy of All PSS.xlsx</code>.
                 {canManageMasterPss
                   ? ' Managers can add, edit, and remove entries.'

@@ -48,7 +48,7 @@ const ReplyHistoryPage: React.FC = () => {
     return (
       <Layout>
         <div className="p-6 text-center">
-          <p className="text-slate-500">Please sign in to view query replies.</p>
+          <p className="text-slate-500">Please sign in to view ticket responses.</p>
         </div>
       </Layout>
     );
@@ -66,7 +66,7 @@ const ReplyHistoryPage: React.FC = () => {
     return (
       <Layout>
         <div className="p-6 text-center text-red-500">
-          {error || 'Query not found.'}
+          {error || 'Ticket not found.'}
         </div>
       </Layout>
     );
@@ -91,7 +91,7 @@ const ReplyHistoryPage: React.FC = () => {
             onClick={() => router.push('/queries/replies-inbox')}
             className="rounded border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
           >
-            Back to Query Replies
+            Back to Tickets
           </button>
         </div>
 

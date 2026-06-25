@@ -19,11 +19,12 @@ interface ReplyItem {
   query_created_at?: string;
   pss_text?: string;
   raised_by?: string;
+  raised_by_id?: number;
   client_name?: string;
-  reply_id: number;
-  reply_body: string;
-  replied_at: string;
-  replied_by: string;
+  reply_id?: number;
+  reply_body?: string;
+  replied_at?: string;
+  replied_by?: string;
   replied_by_id?: number;
   replied_by_role: string;
   attachment_name?: string;
@@ -93,18 +94,18 @@ const EmptyState: React.FC<{ hasFilters: boolean; scope: RepliesScope }> = ({ ha
     </div>
     {hasFilters ? (
       <>
-        <p className="text-sm font-semibold text-slate-700">No matching replies found</p>
+        <p className="text-sm font-semibold text-slate-700">No matching tickets found</p>
         <p className="mt-1 max-w-sm text-sm text-slate-500">Try changing filters or broadening your search criteria.</p>
       </>
     ) : scope === 'my' ? (
       <>
-        <p className="text-sm font-semibold text-slate-700">No replies created by you yet</p>
-        <p className="mt-1 max-w-sm text-sm text-slate-500">Replies you send will appear here for future reference.</p>
+        <p className="text-sm font-semibold text-slate-700">No tickets created by you yet</p>
+        <p className="mt-1 max-w-sm text-sm text-slate-500">Tickets you created will appear here once they receive a reply or are marked resolved.</p>
       </>
     ) : (
       <>
-        <p className="text-sm font-semibold text-slate-700">No replies in the knowledge base yet</p>
-        <p className="mt-1 max-w-sm text-sm text-slate-500">Resolved query replies will appear here as your team builds institutional knowledge.</p>
+        <p className="text-sm font-semibold text-slate-700">No tickets yet</p>
+        <p className="mt-1 max-w-sm text-sm text-slate-500">Tickets with replies or resolutions will appear here as your team works through them.</p>
       </>
     )}
   </div>
@@ -131,24 +132,24 @@ const RepliesInboxPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch('/api/queries/replies-inbox', {
+        const res = await fetch(`/api/queries/replies-inbox?scope=${scope}`, {
           headers: authHeaders(),
         });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || 'Failed to load replies');
+          throw new Error(body.error || 'Failed to load tickets');
         }
         const data = await res.json();
         setReplies(data.replies || []);
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Failed to load replies');
+        setError(err instanceof Error ? err.message : 'Failed to load tickets');
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, [canView]);
+  }, [canView, scope]);
 
   const uniquePssNames = useMemo(
     () =>
@@ -162,20 +163,19 @@ const RepliesInboxPage: React.FC = () => {
     [replies],
   );
 
-  const scopedReplies = useMemo(() => {
-    if (scope !== 'my' || !user) return replies;
-    return replies.filter(
-      (r) => r.replied_by_id === user.id || (!r.replied_by_id && r.replied_by === user.name),
-    );
-  }, [replies, scope, user]);
-
   const filteredReplies = useMemo(() => {
-    let filtered = scopedReplies;
+    let filtered = replies;
     if (filterDateFrom) {
-      filtered = filtered.filter((r) => r.replied_at.slice(0, 10) >= filterDateFrom);
+      filtered = filtered.filter((r) => {
+        const date = r.replied_at?.slice(0, 10) ?? getGeneratedAt(r)?.slice(0, 10);
+        return date ? date >= filterDateFrom : false;
+      });
     }
     if (filterDateTo) {
-      filtered = filtered.filter((r) => r.replied_at.slice(0, 10) <= filterDateTo);
+      filtered = filtered.filter((r) => {
+        const date = r.replied_at?.slice(0, 10) ?? getGeneratedAt(r)?.slice(0, 10);
+        return date ? date <= filterDateTo : false;
+      });
     }
     if (selectedPss.length > 0) {
       filtered = filtered.filter((r) => r.pss_text && selectedPss.includes(r.pss_text));
@@ -184,25 +184,16 @@ const RepliesInboxPage: React.FC = () => {
       filtered = filtered.filter((r) => r.client_name && selectedClients.includes(r.client_name));
     }
     return filtered;
-  }, [scopedReplies, filterDateFrom, filterDateTo, selectedPss, selectedClients]);
+  }, [replies, filterDateFrom, filterDateTo, selectedPss, selectedClients]);
 
   const rows = useMemo(() => {
-    const grouped = filteredReplies.reduce(
-      (acc, reply) => {
-        const key = reply.query_id;
-        if (!acc[key]) acc[key] = { meta: reply, replies: [] };
-        acc[key].replies.push(reply);
-        return acc;
-      },
-      {} as Record<number, { meta: ReplyItem; replies: ReplyItem[] }>,
-    );
-
-    const list = Object.values(grouped);
-    list.sort(
-      (a, b) =>
-        new Date(b.replies[0].replied_at).getTime() - new Date(a.replies[0].replied_at).getTime(),
-    );
-    return list;
+    const list = [...filteredReplies];
+    list.sort((a, b) => {
+      const aTime = a.replied_at ?? getGeneratedAt(a) ?? '';
+      const bTime = b.replied_at ?? getGeneratedAt(b) ?? '';
+      return new Date(bTime).getTime() - new Date(aTime).getTime();
+    });
+    return list.map((meta) => ({ meta, replies: meta.replied_at ? [meta] : [] }));
   }, [filteredReplies]);
 
   const filterChips: FilterChip[] = useMemo(() => {
@@ -254,7 +245,7 @@ const RepliesInboxPage: React.FC = () => {
   if (!user) {
     return (
       <Layout>
-        <p>Please sign in to view query replies.</p>
+        <p>Please sign in to view tickets.</p>
       </Layout>
     );
   }
@@ -377,7 +368,7 @@ const RepliesInboxPage: React.FC = () => {
             </p>
           )}
           {loading ? (
-            <div className="px-4 py-12 text-center text-sm text-slate-500">Loading replies…</div>
+            <div className="px-4 py-12 text-center text-sm text-slate-500">Loading tickets…</div>
           ) : rows.length === 0 && !error ? (
             <EmptyState hasFilters={hasActiveFilters} scope={scope} />
           ) : (
@@ -412,10 +403,12 @@ const RepliesInboxPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
-                  {rows.map(({ meta, replies: queryReplies }, index) => {
-                    const latest = queryReplies[0];
+                  {rows.map(({ meta }, index) => {
                     const generatedAt = getGeneratedAt(meta);
-                    const solveTime = formatSolveDuration(generatedAt, latest.replied_at);
+                    const solveTime =
+                      meta.replied_at && generatedAt
+                        ? formatSolveDuration(generatedAt, meta.replied_at)
+                        : '—';
                     return (
                       <tr
                         key={meta.query_id}
@@ -438,20 +431,26 @@ const RepliesInboxPage: React.FC = () => {
                           {cell(meta.client_name)}
                         </td>
                         <td className="whitespace-nowrap px-3 py-2.5 text-slate-700">{cell(meta.raised_by)}</td>
-                        <td className="whitespace-nowrap px-3 py-2.5 text-slate-700">{cell(latest.replied_by)}</td>
+                        <td className="whitespace-nowrap px-3 py-2.5 text-slate-700">{cell(meta.replied_by)}</td>
                         <td className="whitespace-nowrap px-3 py-2.5 text-xs text-slate-600">
                           {formatDateTime(generatedAt)}
                         </td>
                         <td className="whitespace-nowrap px-3 py-2.5 text-xs text-slate-600">
-                          {formatDateTime(latest.replied_at)}
+                          {formatDateTime(meta.replied_at)}
                         </td>
                         <td className="whitespace-nowrap px-3 py-2.5 text-xs">
                           <span
-                            className={solveDurationClass(generatedAt, latest.replied_at)}
+                            className={
+                              meta.replied_at && generatedAt
+                                ? solveDurationClass(generatedAt, meta.replied_at)
+                                : 'text-slate-500'
+                            }
                             title={
-                              generatedAt
-                                ? `Query entered → reply sent (${solveTime})`
-                                : 'Generated time not recorded'
+                              generatedAt && meta.replied_at
+                                ? `Ticket entered → reply sent (${solveTime})`
+                                : meta.replied_at
+                                  ? undefined
+                                  : 'Awaiting first reply'
                             }
                           >
                             {solveTime}

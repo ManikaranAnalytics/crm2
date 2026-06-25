@@ -39,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		    if (!attachment || !attachment.dataBase64 || !attachment.fileName) {
 		      return res
 		        .status(400)
-		        .json({ error: 'Solution email (.msg or .eml) attachment is required to close a query' });
+		        .json({ error: 'Solution email (.msg or .eml) attachment is required to close a ticket' });
 		    }
 		    if (
 		      typeof attachment.fileName !== 'string' ||
@@ -125,7 +125,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 		
 		    return res.status(200).json({ query: updated });
 		  } catch (err: any) {
-		    return res.status(400).json({ error: err.message || 'Failed to update query status' });
+		    return res.status(400).json({ error: err.message || 'Failed to update ticket status' });
 		  }
 }
 

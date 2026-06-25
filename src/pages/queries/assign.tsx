@@ -43,7 +43,7 @@ const AssignQueriesPage: React.FC = () => {
       const res = await fetch(`/api/queries/assign?actorId=${user.id}`);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || 'Failed to load active queries');
+        throw new Error(body.error || 'Failed to load active tickets');
       }
       const body = await res.json();
       setQueries(body.queries || []);
@@ -63,8 +63,8 @@ const AssignQueriesPage: React.FC = () => {
     return (
       <Layout>
         <div className="space-y-4">
-          <h2 className="text-2xl font-semibold text-slate-900">Queries</h2>
-          <p className="text-sm text-slate-500">Please sign in to view active queries.</p>
+          <h2 className="text-2xl font-semibold text-slate-900">Tickets</h2>
+          <p className="text-sm text-slate-500">Please sign in to view active tickets.</p>
         </div>
       </Layout>
     );
@@ -74,8 +74,8 @@ const AssignQueriesPage: React.FC = () => {
     return (
       <Layout>
         <div className="space-y-4">
-          <h2 className="text-2xl font-semibold text-slate-900">Queries</h2>
-          <p className="text-sm text-slate-500">You are not authorized to reply to queries.</p>
+          <h2 className="text-2xl font-semibold text-slate-900">Tickets</h2>
+          <p className="text-sm text-slate-500">You are not authorized to respond to tickets.</p>
         </div>
       </Layout>
     );
@@ -104,7 +104,7 @@ const AssignQueriesPage: React.FC = () => {
                     S.No.
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                    Code
+                    Ticket ID
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
                     Client
@@ -130,14 +130,14 @@ const AssignQueriesPage: React.FC = () => {
                 {loading && (
                   <tr>
                     <td colSpan={8} className="px-4 py-6 text-center text-sm text-slate-500">
-                      Loading active queries...
+                      Loading active tickets...
                     </td>
                   </tr>
                 )}
                 {!loading && queries.length === 0 && !error && (
                   <tr>
                     <td colSpan={8} className="px-4 py-6 text-center text-sm text-slate-500">
-                      No active queries awaiting reply.
+                      No active tickets awaiting reply.
                     </td>
                   </tr>
                 )}

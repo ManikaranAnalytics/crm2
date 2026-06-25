@@ -69,7 +69,7 @@ const TodaySolvedPage: React.FC = () => {
         });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || 'Failed to load solved queries');
+          throw new Error(body.error || 'Failed to load resolved tickets');
         }
         const data = await res.json();
         setQueries(data.queries || []);
@@ -140,8 +140,8 @@ const TodaySolvedPage: React.FC = () => {
     return (
       <Layout>
         <div className="space-y-4">
-          <h2 className="text-2xl font-semibold text-slate-900">Queries</h2>
-          <p className="text-sm text-slate-500">Please sign in to view solved queries.</p>
+          <h2 className="text-2xl font-semibold text-slate-900">Tickets</h2>
+          <p className="text-sm text-slate-500">Please sign in to view resolved tickets.</p>
         </div>
       </Layout>
     );
@@ -151,7 +151,7 @@ const TodaySolvedPage: React.FC = () => {
     return (
       <Layout>
         <div className="space-y-4">
-          <h2 className="text-2xl font-semibold text-slate-900">Queries</h2>
+          <h2 className="text-2xl font-semibold text-slate-900">Tickets</h2>
           <p className="text-sm text-slate-500">You are not authorized to view this page.</p>
         </div>
       </Layout>
@@ -233,7 +233,7 @@ const TodaySolvedPage: React.FC = () => {
           <span className="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700">
             {queries.length} resolved
           </span>
-          <span className="text-xs text-slate-500">{queries.length} queries</span>
+          <span className="text-xs text-slate-500">{queries.length} tickets</span>
         </div>
 
         <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
@@ -250,7 +250,7 @@ const TodaySolvedPage: React.FC = () => {
                     S.No.
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                    Query Code
+                    Ticket ID
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
                     Client
@@ -276,14 +276,14 @@ const TodaySolvedPage: React.FC = () => {
                 {loading && (
                   <tr>
                     <td colSpan={8} className="px-4 py-6 text-center text-sm text-slate-500">
-                      Loading solved queries...
+                      Loading resolved tickets...
                     </td>
                   </tr>
                 )}
                 {!loading && queries.length === 0 && !error && (
                   <tr>
                     <td colSpan={8} className="px-4 py-6 text-center text-sm text-slate-500">
-                      No solved queries found.
+                      No resolved tickets found.
                     </td>
                   </tr>
                 )}

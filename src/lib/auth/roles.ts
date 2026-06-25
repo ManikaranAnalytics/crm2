@@ -13,7 +13,7 @@ export function getDefaultQueriesRoute(role: RoleName): string {
   return '/queries/assign';
 }
 
-/** Query Replies tab destination — same for all roles that can view replies. */
+/** Tickets inbox tab destination — same for all roles that can view tickets. */
 export function getRepliesInboxRoute(scope: 'my' | 'all' = 'all'): string {
   return scope === 'my' ? '/queries/replies-inbox?scope=my' : '/queries/replies-inbox';
 }

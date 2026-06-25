@@ -163,7 +163,7 @@ const ReplyPage: React.FC = () => {
     }
 
     const to = parsedMsg?.senderEmail || 'client@example.com';
-    const subject = `RE: ${parsedMsg?.subject || thread?.queryCode || 'Query Response'}`;
+    const subject = `RE: ${parsedMsg?.subject || thread?.queryCode || 'Ticket Response'}`;
     const boundary = `----=_NextPart_${Math.random().toString(36).substring(2)}`;
 
     const headers = [
@@ -208,7 +208,7 @@ const ReplyPage: React.FC = () => {
     return (
       <Layout>
         <div className="p-6 text-center">
-          <p className="text-slate-500">Please sign in to view query conversations.</p>
+          <p className="text-slate-500">Please sign in to view ticket conversations.</p>
         </div>
       </Layout>
     );
@@ -217,7 +217,7 @@ const ReplyPage: React.FC = () => {
   if (loading) {
     return (
       <Layout>
-        <div className="p-6 text-center text-slate-500">Loading query details...</div>
+        <div className="p-6 text-center text-slate-500">Loading ticket details...</div>
       </Layout>
     );
   }
@@ -226,7 +226,7 @@ const ReplyPage: React.FC = () => {
     return (
       <Layout>
         <div className="p-6 text-center text-red-500">
-          {error || 'Query not found.'}
+          {error || 'Ticket not found.'}
         </div>
       </Layout>
     );
@@ -243,7 +243,7 @@ const ReplyPage: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h2 className="text-base font-bold text-slate-800">
-              {canReply ? 'Compose Response' : 'Query Conversation'}
+              {canReply ? 'Compose Response' : 'Ticket Conversation'}
             </h2>
             <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusBadgeClass(thread.status)}`}>
               {formatQueryStatus(thread.status)}
@@ -254,7 +254,7 @@ const ReplyPage: React.FC = () => {
             onClick={() => router.push('/queries/assign')}
             className="rounded border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
           >
-            Back to Reply to Queries
+            Back to Respond to Tickets
           </button>
         </div>
 
@@ -285,7 +285,7 @@ const ReplyPage: React.FC = () => {
               </div>
             ) : resolved ? (
               <div className="rounded-lg bg-slate-50 p-4 text-center border border-slate-200">
-                <p className="text-sm text-slate-500 font-medium">This query has been resolved.</p>
+                <p className="text-sm text-slate-500 font-medium">This ticket has been resolved.</p>
                 <p className="text-xs text-slate-400 mt-1">No further replies can be sent.</p>
               </div>
             ) : (

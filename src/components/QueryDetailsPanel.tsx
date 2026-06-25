@@ -46,7 +46,7 @@ const QueryDetailsPanel: React.FC<QueryDetailsPanelProps> = ({
     <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
       <div className="bg-[#0f766e] px-4 py-2.5">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-white">
-          Query Information
+          Ticket Information
         </h2>
       </div>
       <dl className="grid grid-cols-1 gap-px bg-slate-100 sm:grid-cols-2">

@@ -66,15 +66,15 @@ const QueryTabs: React.FC<QueryTabsProps> = ({ active }) => {
 
   return (
     <div className="border-b border-slate-200 bg-white">
-      <nav className="-mb-px flex gap-6 px-1" aria-label="Query sections">
+      <nav className="-mb-px flex gap-6 px-1" aria-label="Ticket sections">
         {canAddQuery && (
           <Link href="/queries/new" className={`${tabBase} ${tabClass('ADD')}`}>
-            Add Query
+            Create Ticket
           </Link>
         )}
         {canReply && (
           <Link href="/queries/assign" className={`${tabBase} ${tabClass('ASSIGN')}`}>
-            Reply to Queries
+            Respond to Tickets
           </Link>
         )}
         {canViewReplies && (
@@ -91,7 +91,7 @@ const QueryTabs: React.FC<QueryTabsProps> = ({ active }) => {
               aria-expanded={repliesOpen}
               aria-haspopup="true"
             >
-              Query Replies
+              Tickets
               <svg
                 className={`h-4 w-4 transition-transform ${repliesOpen ? 'rotate-180' : ''}`}
                 fill="none"
@@ -118,7 +118,7 @@ const QueryTabs: React.FC<QueryTabsProps> = ({ active }) => {
                     }`}
                     onClick={() => setRepliesOpen(false)}
                   >
-                    My Query Replies
+                    My Tickets
                   </Link>
                   <Link
                     href="/queries/replies-inbox?scope=all"
@@ -129,7 +129,7 @@ const QueryTabs: React.FC<QueryTabsProps> = ({ active }) => {
                     }`}
                     onClick={() => setRepliesOpen(false)}
                   >
-                    All Query Replies
+                    All Tickets
                   </Link>
                 </div>
               </div>
@@ -138,7 +138,7 @@ const QueryTabs: React.FC<QueryTabsProps> = ({ active }) => {
         )}
         {canViewAll && (
           <Link href="/queries/all" className={`${tabBase} ${tabClass('ALL')}`}>
-            All Queries (Admin)
+            All Tickets (Admin)
           </Link>
         )}
       </nav>

@@ -640,9 +640,9 @@ export async function createQueryReply(input: {
   );
 
   const queryRow = queryResult.rows[0];
-  if (!queryRow) throw new Error('Query not found');
+  if (!queryRow) throw new Error('Ticket not found');
   if (queryRow.current_status === 'CLOSED') {
-    throw new Error('This query is already resolved');
+    throw new Error('This ticket is already resolved');
   }
 
   const authorResult = await query<{ name: string; role_name: string }>(
@@ -654,7 +654,7 @@ export async function createQueryReply(input: {
   );
   const author = authorResult.rows[0];
   if (!author || !['ADMIN', 'MANAGER'].includes(author.role_name)) {
-    throw new Error('You are not authorized to reply to queries');
+    throw new Error('You are not authorized to reply to tickets');
   }
 
   const insertResult = await query<{ id: number; created_at: string }>(
@@ -706,7 +706,7 @@ export async function assignQueryToUser(
   assigneeUserId: number,
 ): Promise<QueryRecord> {
   if (!queryId || Number.isNaN(queryId)) {
-    throw new Error('A valid query id is required');
+    throw new Error('A valid ticket id is required');
   }
   if (!assigneeUserId || Number.isNaN(assigneeUserId)) {
     throw new Error('A valid assignee user id is required');
@@ -736,7 +736,7 @@ export async function assignQueryToUser(
 
   const row = updateResult.rows[0];
   if (!row) {
-    throw new Error('Query not found');
+    throw new Error('Ticket not found');
   }
 
   return {
@@ -757,7 +757,7 @@ export async function updateQueryStatusWithApproval(
   options?: { remark?: string | null },
 ): Promise<QueryRecord> {
   if (!queryId || Number.isNaN(queryId)) {
-    throw new Error('A valid query id is required');
+    throw new Error('A valid ticket id is required');
   }
 
   // Ensure the query exists and update its status
@@ -781,7 +781,7 @@ export async function updateQueryStatusWithApproval(
 
   const updated = updateResult.rows[0];
   if (!updated) {
-    throw new Error('Query not found');
+    throw new Error('Ticket not found');
   }
 
   // Resolve approver (Himanshu) from the users table

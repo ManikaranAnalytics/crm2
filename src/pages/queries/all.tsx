@@ -72,12 +72,12 @@ const AllQueriesPage: React.FC = () => {
         const res = await fetch(`/api/queries?scope=all&userId=${user.id}`);
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || 'Failed to load queries');
+          throw new Error(body.error || 'Failed to load tickets');
         }
         const data = await res.json();
         setQueries(data.queries || []);
       } catch (err: any) {
-        setError(err.message || 'Failed to load queries');
+        setError(err.message || 'Failed to load tickets');
       } finally {
         setLoading(false);
       }
@@ -87,7 +87,7 @@ const AllQueriesPage: React.FC = () => {
 
   const handleStatusChange = async (queryId: number, newStatus: string) => {
     if (!user) {
-      setError('You must be logged in to update query status');
+      setError('You must be logged in to update ticket status');
       return;
     }
     // Closing requires an attached solution .msg via the close panel
@@ -110,13 +110,13 @@ const AllQueriesPage: React.FC = () => {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || 'Failed to update query status');
+        throw new Error(body.error || 'Failed to update ticket status');
       }
       const body = await res.json();
       const updatedStatus: string = body.query?.status || newStatus;
       setQueries((prev) => prev.map((q) => (q.id === queryId ? { ...q, status: updatedStatus } : q)));
     } catch (err: any) {
-      setError(err.message || 'Failed to update query status');
+      setError(err.message || 'Failed to update ticket status');
     } finally {
       setUpdatingId(null);
     }
@@ -178,7 +178,7 @@ const AllQueriesPage: React.FC = () => {
 
   const handleSubmitClose = async () => {
     if (!user) {
-      setClosingError('You must be logged in to close a query');
+      setClosingError('You must be logged in to close a ticket');
       return;
     }
     if (!closingQueryId) return;
@@ -205,7 +205,7 @@ const AllQueriesPage: React.FC = () => {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || 'Failed to request query closure');
+        throw new Error(body.error || 'Failed to request ticket closure');
       }
 
       const body = await res.json();
@@ -219,7 +219,7 @@ const AllQueriesPage: React.FC = () => {
       setSolutionDocAttachment(null);
       setSolutionRemark('');
     } catch (err: any) {
-      setClosingError(err.message || 'Failed to request query closure');
+      setClosingError(err.message || 'Failed to request ticket closure');
     } finally {
       setClosingSubmitting(false);
     }
@@ -229,8 +229,8 @@ const AllQueriesPage: React.FC = () => {
     return (
       <Layout>
         <div className="space-y-4">
-          <h2 className="text-2xl font-semibold text-slate-900">All Queries</h2>
-          <p className="text-sm text-slate-500">Please sign in to view queries.</p>
+          <h2 className="text-2xl font-semibold text-slate-900">All Tickets</h2>
+          <p className="text-sm text-slate-500">Please sign in to view tickets.</p>
         </div>
       </Layout>
     );
@@ -240,8 +240,8 @@ const AllQueriesPage: React.FC = () => {
     return (
       <Layout>
         <div className="space-y-4">
-          <h2 className="text-2xl font-semibold text-slate-900">All Queries</h2>
-          <p className="text-sm text-slate-500">Only admin and KAM users can view all queries.</p>
+          <h2 className="text-2xl font-semibold text-slate-900">All Tickets</h2>
+          <p className="text-sm text-slate-500">Only admin and KAM users can view all tickets.</p>
         </div>
       </Layout>
     );
@@ -266,7 +266,7 @@ const AllQueriesPage: React.FC = () => {
                     S.No.
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                    Code
+                    Ticket ID
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
                     Client
@@ -298,14 +298,14 @@ const AllQueriesPage: React.FC = () => {
 	                {loading && (
 	                  <tr>
 	                    <td colSpan={10} className="px-4 py-6 text-center text-sm text-slate-500">
-	                      Loading queries...
+	                      Loading tickets...
 	                    </td>
 	                  </tr>
 	                )}
 	                {!loading && queries.length === 0 && !error && (
 	                  <tr>
 	                    <td colSpan={10} className="px-4 py-6 text-center text-sm text-slate-500">
-	                      No queries found.
+	                      No tickets found.
 	                    </td>
 	                  </tr>
 	                )}
@@ -357,10 +357,10 @@ const AllQueriesPage: React.FC = () => {
         {closingQueryId && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
             <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-slate-900">Close query</h3>
+              <h3 className="text-sm font-semibold text-slate-900">Close ticket</h3>
               <p className="text-xs text-slate-700">
                 To request closing
-                {closingQuery ? ` query ${closingQuery.queryCode}` : ' this query'}, please attach
+                {closingQuery ? ` ticket ${closingQuery.queryCode}` : ' this ticket'}, please attach
                 the solution email (.msg or .eml). This will be sent to Himanshu for approval.
               </p>
             </div>

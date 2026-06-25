@@ -168,7 +168,7 @@ const DashboardPage: React.FC = () => {
           <div className="relative group overflow-hidden bg-white border border-slate-200/80 rounded-xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.015)] hover:-translate-y-0.5 transition-all duration-200">
             <div className="absolute top-0 left-0 w-full h-[3px] bg-teal-500"></div>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Queries</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Tickets</span>
               <div className="h-8 w-8 rounded-full bg-teal-50 flex items-center justify-center group-hover:bg-teal-100 transition-colors">
                 <IconTotal />
               </div>
@@ -183,7 +183,7 @@ const DashboardPage: React.FC = () => {
           <div className="relative group overflow-hidden bg-white border border-slate-200/80 rounded-xl p-5 shadow-[0_1px_2px_rgba(0,0,0,0.015)] hover:-translate-y-0.5 transition-all duration-200">
             <div className="absolute top-0 left-0 w-full h-[3px] bg-indigo-500"></div>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Open Queries</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Open Tickets</span>
               <div className="h-8 w-8 rounded-full bg-indigo-50 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
                 <IconOpen />
               </div>
@@ -244,18 +244,18 @@ const DashboardPage: React.FC = () => {
         <section className="grid gap-6 md:grid-cols-2">
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
             <div className="border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Queries by status</h3>
-              <p className="mt-0.5 text-xs text-slate-400">Operational query breakdown by status type.</p>
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Tickets by status</h3>
+              <p className="mt-0.5 text-xs text-slate-400">Operational ticket breakdown by status type.</p>
             </div>
             <div className="mt-6">
               {byStatus.length === 0 && !loading ? (
-                <p className="text-sm text-slate-500 italic">No query data yet.</p>
+                <p className="text-sm text-slate-500 italic">No ticket data yet.</p>
               ) : (
                 <DashboardChart
                   type="column"
                   categories={byStatus.map((d) => d.label)}
                   seriesData={byStatus.map((d) => d.value)}
-                  seriesName="Queries"
+                  seriesName="Tickets"
                   colors={['#0f766e']}
                 />
               )}
@@ -264,18 +264,18 @@ const DashboardPage: React.FC = () => {
 
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
             <div className="border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Queries by technology</h3>
-              <p className="mt-0.5 text-xs text-slate-400">Distribution of queries across energy technologies.</p>
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Tickets by technology</h3>
+              <p className="mt-0.5 text-xs text-slate-400">Distribution of tickets across energy technologies.</p>
             </div>
             <div className="mt-6">
               {byTechnology.length === 0 && !loading ? (
-                <p className="text-sm text-slate-500 italic">No query data yet.</p>
+                <p className="text-sm text-slate-500 italic">No ticket data yet.</p>
               ) : (
                 <DashboardChart
                   type="column"
                   categories={byTechnology.map((d) => d.label)}
                   seriesData={byTechnology.map((d) => d.value)}
-                  seriesName="Queries"
+                  seriesName="Tickets"
                   colors={['#4f46e5']}
                 />
               )}
@@ -287,18 +287,18 @@ const DashboardPage: React.FC = () => {
         <section className="grid gap-6 md:grid-cols-2">
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
             <div className="border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Technical queries (month-wise)</h3>
-              <p className="mt-0.5 text-xs text-slate-400">Monthly query trend aggregate volumes.</p>
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Technical tickets (month-wise)</h3>
+              <p className="mt-0.5 text-xs text-slate-400">Monthly ticket trend aggregate volumes.</p>
             </div>
             <div className="mt-6">
               {byMonth.length === 0 && !loading ? (
-                <p className="text-sm text-slate-500 italic">No query data yet.</p>
+                <p className="text-sm text-slate-500 italic">No ticket data yet.</p>
               ) : (
                 <DashboardChart
                   type="column"
                   categories={byMonth.map((d) => d.label)}
                   seriesData={byMonth.map((d) => d.value)}
-                  seriesName="Queries"
+                  seriesName="Tickets"
                   colors={['#10b981']}
                 />
               )}
@@ -307,18 +307,18 @@ const DashboardPage: React.FC = () => {
 
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
             <div className="border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Date-wise technical queries</h3>
-              <p className="mt-0.5 text-xs text-slate-400">Daily frequency trend of incoming queries.</p>
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Date-wise technical tickets</h3>
+              <p className="mt-0.5 text-xs text-slate-400">Daily frequency trend of incoming tickets.</p>
             </div>
             <div className="mt-6">
               {byDate.length === 0 && !loading ? (
-                <p className="text-sm text-slate-500 italic">No recent query data.</p>
+                <p className="text-sm text-slate-500 italic">No recent ticket data.</p>
               ) : (
                 <DashboardChart
                   type="area"
                   categories={byDate.map((d) => d.label)}
                   seriesData={byDate.map((d) => d.value)}
-                  seriesName="Queries"
+                  seriesName="Tickets"
                   colors={['#0f766e']}
                 />
               )}
@@ -331,17 +331,17 @@ const DashboardPage: React.FC = () => {
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
             <div className="border-b border-slate-100 pb-3">
               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Team workload (assignee-wise)</h3>
-              <p className="mt-0.5 text-xs text-slate-400">Active assigned query distribution among team members.</p>
+              <p className="mt-0.5 text-xs text-slate-400">Active assigned ticket distribution among team members.</p>
             </div>
             <div className="mt-6">
               {byUser.length === 0 && !loading ? (
-                <p className="text-sm text-slate-500 italic">No query data yet.</p>
+                <p className="text-sm text-slate-500 italic">No ticket data yet.</p>
               ) : (
                 <DashboardChart
                   type="column"
                   categories={byUser.map((d) => d.label)}
                   seriesData={byUser.map((d) => d.value)}
-                  seriesName="Queries"
+                  seriesName="Tickets"
                   colors={['#0ea5e9']}
                 />
               )}
@@ -350,18 +350,18 @@ const DashboardPage: React.FC = () => {
 
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
             <div className="border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">State-wise query analysis</h3>
-              <p className="mt-0.5 text-xs text-slate-400">Geographic distribution of raised queries.</p>
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">State-wise ticket analysis</h3>
+              <p className="mt-0.5 text-xs text-slate-400">Geographic distribution of raised tickets.</p>
             </div>
             <div className="mt-6">
               {byState.length === 0 && !loading ? (
-                <p className="text-sm text-slate-500 italic">No query data yet.</p>
+                <p className="text-sm text-slate-500 italic">No ticket data yet.</p>
               ) : (
                 <DashboardChart
                   type="column"
                   categories={byState.map((d) => d.label)}
                   seriesData={byState.map((d) => d.value)}
-                  seriesName="Queries"
+                  seriesName="Tickets"
                   colors={['#8b5cf6']}
                 />
               )}
@@ -373,21 +373,21 @@ const DashboardPage: React.FC = () => {
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
           <div className="border-b border-slate-100 pb-3">
             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
-              State-wise queries (quarterly comparison)
+              State-wise tickets (quarterly comparison)
             </h3>
             <p className="mt-0.5 text-xs text-slate-400">
-              Granular quarterly state-wise comparison of query volumes.
+              Granular quarterly state-wise comparison of ticket volumes.
             </p>
           </div>
           <div className="mt-6">
             {byStateQuarterly.length === 0 && !loading ? (
-              <p className="text-sm text-slate-500 italic">No query data yet.</p>
+              <p className="text-sm text-slate-500 italic">No ticket data yet.</p>
             ) : (
               <DashboardChart
                 type="column"
                 categories={byStateQuarterly.map((p) => `${p.state} - ${p.quarter}`)}
                 seriesData={byStateQuarterly.map((p) => p.value)}
-                seriesName="Queries"
+                seriesName="Tickets"
                 colors={['#ec4899']}
               />
             )}
