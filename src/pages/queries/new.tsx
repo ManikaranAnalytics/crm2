@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Layout from '../../components/Layout';
 import QueryTabs from '../../components/QueryTabs';
 import { exportDraftEml } from '../../lib/exportEml';
+import { EMAIL_FILE_ACCEPT, isEmailFileName } from '../../lib/email/emailFileValidation';
 import { authHeaders, useAuth } from '../_app';
 
 interface PssOption {
@@ -132,8 +133,8 @@ interface PssOption {
 
 	const handleAttachmentFile = (file: File | null) => {
 		if (!file) return;
-		if (!file.name.toLowerCase().endsWith('.msg')) {
-			setError('Please upload a .msg email file');
+		if (!isEmailFileName(file.name)) {
+			setError('Please upload a .msg or .eml email file');
 			return;
 		}
 		if (file.size > 20 * 1024 * 1024) {
@@ -194,9 +195,9 @@ interface PssOption {
 					return;
 				}
 			}
-			// Require the original client email (.msg) for every new query
+			// Require the original client email (.msg or .eml) for every new query
 			if (!attachment) {
-				setError('Please attach the client email (.msg) before saving the query.');
+				setError('Please attach the client email (.msg or .eml) before saving the query.');
 				return;
 			}
 			setSubmitting(true);
@@ -520,9 +521,9 @@ interface PssOption {
 
 					<section className="space-y-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-5 text-sm">
 						<div>
-							<h3 className="text-sm font-semibold text-slate-900">Attach email (.msg)</h3>
+							<h3 className="text-sm font-semibold text-slate-900">Attach email (.msg or .eml)</h3>
 							<p className="mt-1 text-xs text-slate-500">
-								Drag and drop the Outlook email (.msg) related to this query, or click to browse.
+								Drag and drop the email (.msg or .eml) related to this query, or click to browse.
 								Himanshu will be able to download and review it while assigning/approving.
 							</p>
 						</div>
@@ -533,13 +534,13 @@ interface PssOption {
 							className="flex cursor-pointer flex-col items-center justify-center rounded-md border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-xs text-slate-500 hover:border-teal-400 hover:bg-teal-50"
 						>
 							<p className="font-medium text-slate-700">
-								{attachment ? attachment.fileName : 'Drop .msg file here or click to upload'}
+								{attachment ? attachment.fileName : 'Drop .msg or .eml file here or click to upload'}
 							</p>
-							<p className="mt-1 text-[11px] text-slate-500">Only .msg files are supported.</p>
+							<p className="mt-1 text-[11px] text-slate-500">Supported formats: .msg, .eml</p>
 							<input
 								ref={fileInputRef}
 								type="file"
-								accept=".msg"
+								accept={EMAIL_FILE_ACCEPT}
 								className="hidden"
 								onChange={(e) => handleAttachmentFile(e.target.files?.[0] || null)}
 							/>

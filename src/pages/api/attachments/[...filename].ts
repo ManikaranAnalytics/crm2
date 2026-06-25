@@ -48,6 +48,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
     } else if (ext === '.xlsx') {
       contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    } else if (ext === '.msg') {
+      contentType = 'application/vnd.ms-outlook';
+    } else if (ext === '.eml') {
+      contentType = 'message/rfc822';
     }
 
     // 5. Send file headers and stream contents

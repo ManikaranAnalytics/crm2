@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { query } from '../../../lib/db';
 import { isValidQueryStatus, updateQueryStatusWithApproval } from '../../../services/queryService';
+import { isEmailFileName } from '../../../lib/email/emailFileValidation';
 
 export const config = {
   api: {
@@ -32,19 +33,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Valid status is required' });
   }
 
-		  // When closing a query, require a solution .msg attachment; allow optional
+		  // When closing a query, require a solution .msg/.eml attachment; allow optional
 		  // .docx solution document and free-text remark.
 		  if (status === 'CLOSED') {
 		    if (!attachment || !attachment.dataBase64 || !attachment.fileName) {
 		      return res
 		        .status(400)
-		        .json({ error: 'Solution email (.msg) attachment is required to close a query' });
+		        .json({ error: 'Solution email (.msg or .eml) attachment is required to close a query' });
 		    }
 		    if (
 		      typeof attachment.fileName !== 'string' ||
-		      !attachment.fileName.toLowerCase().endsWith('.msg')
+		      !isEmailFileName(attachment.fileName)
 		    ) {
-		      return res.status(400).json({ error: 'Attachment must be a .msg email file' });
+		      return res.status(400).json({ error: 'Attachment must be a .msg or .eml email file' });
 		    }
 		    if (docAttachment && docAttachment.fileName) {
 		      if (

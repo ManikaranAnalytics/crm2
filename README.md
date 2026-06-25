@@ -8,7 +8,8 @@ A premium Customer Relationship Management (CRM) portal built with Next.js, Post
 
 - **Interactive Dashboard**: Premium data visualizations built on Highcharts including Columns, Area, and Line charts showing query volume trends, solved tickets, and team queues.
 - **Secure Authentication**: Cryptographically signed JSON Web Tokens (JWT) stored in secure, HttpOnly session cookies (`crm_session_token`) to safeguard user accounts.
-- **Query Management**: Log new queries with Outlook `.msg` parsing, status badges, automated assignment routing, and query tracking codes.
+- **Query Management**: Log new queries with Outlook `.msg` / `.eml` email attachments, status badges, automated assignment routing, and query tracking codes.
+- **Outlook-Style Email Preview**: Unified in-app viewer for `.msg` and `.eml` files with HTML rendering (tables, images, signatures), CID inline images, sanitized HTML, and nested attachment downloads.
 - **Outlook EML Export**: Seamlessly download standard RFC-822 `.eml` mail draft files client-side, loaded with recipient details, subjects, bodies, and files for immediate draft editing in Microsoft Outlook.
 - **Secure Attachment Subdirectories**: Uploaded files are segmented into query-specific directories (`uploads_secure/query_<id>/`) and dynamically streamed via Catch-All routing endpoints to prevent path traversal attacks.
 - **Validation Guards**: 
@@ -23,7 +24,7 @@ A premium Customer Relationship Management (CRM) portal built with Next.js, Post
 ## Technology Stack
 
 * **Frontend**: Next.js, React, Tailwind CSS, Highcharts, Lucide-style SVGs.
-* **Backend**: Next.js API Routes, Node.js (`@kenjiuno/msgreader` for Microsoft Outlook compound files parsing).
+* **Backend**: Next.js API Routes, Node.js email parsing (`@kenjiuno/msgreader`, `mailparser`, `rtf-stream-parser`, `iconv-lite`, `sanitize-html`).
 * **Database**: PostgreSQL (driver: `pg`).
 * **Environment**: Docker & Docker Compose.
 * **Supported PSS Technologies**: Solar, Wind, Solar-Wind Hybrid, Solar-Wind-Battery Hybrid, Solar-Battery Hybrid, Wind-Battery Hybrid.

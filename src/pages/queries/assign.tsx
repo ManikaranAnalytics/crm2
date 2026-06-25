@@ -116,7 +116,7 @@ const AssignQueriesPage: React.FC = () => {
                     Assigned to
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                    Email (.msg)
+                    Email (.msg / .eml)
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
                     Status

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import QueryDetailsPanel from './QueryDetailsPanel';
 import { authHeaders, useAuth } from '../pages/_app';
 import { formatQueryStatus, isQueryResolved, statusBadgeClass } from '../lib/queryStatus';
+import { isEmailFileName } from '../lib/email/emailFileValidation';
 import type { QueryThread } from '../services/queryService';
 
 const IconPaperclip = () => (
@@ -91,12 +92,12 @@ const QueryConversationModal: React.FC<QueryConversationModalProps> = ({
       const originalMsg = data.thread?.messages?.find(
         (m: { type: string }) => m.type === 'ORIGINAL',
       );
-      const msgAttachment =
+      const emailAttachment =
         originalMsg?.attachments?.find((a: { url: string }) =>
-          a.url.toLowerCase().endsWith('.msg'),
+          isEmailFileName(a.url),
         ) || originalMsg?.attachment;
-      if (msgAttachment?.url?.toLowerCase().endsWith('.msg')) {
-        const filename = msgAttachment.url.replace('/api/attachments/', '');
+      if (emailAttachment?.url && isEmailFileName(emailAttachment.url)) {
+        const filename = emailAttachment.url.replace('/api/attachments/', '');
         loadParsedMsg(filename);
       }
     } catch (err: unknown) {

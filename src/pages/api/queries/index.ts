@@ -5,6 +5,7 @@ import { getSessionUser } from '../../../lib/auth/session';
 import { CAN_MANAGE_QUERIES } from '../../../lib/auth/roles';
 import { query } from '../../../lib/db';
 import { listQueries, createQuery } from '../../../services/queryService';
+import { isEmailFileName } from '../../../lib/email/emailFileValidation';
 
 export const config = {
   api: {
@@ -98,17 +99,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 	        attachment,
 	      } = req.body || {};
 
-		      // Require the original client email as a .msg attachment for every new query
+		      // Require the original client email as a .msg or .eml attachment for every new query
 		      if (!attachment || !attachment.dataBase64 || !attachment.fileName) {
 		        return res
 		          .status(400)
-		          .json({ error: 'Client email (.msg) attachment is required to create a query' });
+		          .json({ error: 'Client email (.msg or .eml) attachment is required to create a query' });
 		      }
 		      if (
 		        typeof attachment.fileName !== 'string' ||
-		        !attachment.fileName.toLowerCase().endsWith('.msg')
+		        !isEmailFileName(attachment.fileName)
 		      ) {
-		        return res.status(400).json({ error: 'Attachment must be a .msg email file' });
+		        return res.status(400).json({ error: 'Attachment must be a .msg or .eml email file' });
 		      }
 
 	      const created = await createQuery({

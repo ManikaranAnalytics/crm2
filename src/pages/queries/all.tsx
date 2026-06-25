@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import QueryTabs from '../../components/QueryTabs';
 import { getRepliesInboxRoute } from '../../lib/auth/roles';
+import { EMAIL_FILE_ACCEPT, isEmailFileName } from '../../lib/email/emailFileValidation';
 import { useAuth } from '../_app';
 
 interface QuerySummary {
@@ -123,8 +124,8 @@ const AllQueriesPage: React.FC = () => {
 
   const handleSolutionFile = (file: File | null) => {
     if (!file) return;
-    if (!file.name.toLowerCase().endsWith('.msg')) {
-      setClosingError('Please upload a .msg email file');
+    if (!isEmailFileName(file.name)) {
+      setClosingError('Please upload a .msg or .eml email file');
       return;
     }
     setClosingError(null);
@@ -182,7 +183,7 @@ const AllQueriesPage: React.FC = () => {
     }
     if (!closingQueryId) return;
     if (!solutionAttachment) {
-      setClosingError('Please attach the solution email (.msg) to request closure.');
+      setClosingError('Please attach the solution email (.msg or .eml) to request closure.');
       return;
     }
 
@@ -360,7 +361,7 @@ const AllQueriesPage: React.FC = () => {
               <p className="text-xs text-slate-700">
                 To request closing
                 {closingQuery ? ` query ${closingQuery.queryCode}` : ' this query'}, please attach
-                the solution email (.msg). This will be sent to Himanshu for approval.
+                the solution email (.msg or .eml). This will be sent to Himanshu for approval.
               </p>
             </div>
             {closingError && (
@@ -375,13 +376,13 @@ const AllQueriesPage: React.FC = () => {
               <p className="font-medium text-slate-700">
                 {solutionAttachment
                   ? solutionAttachment.fileName
-                  : 'Click to upload solution .msg email'}
+                  : 'Click to upload solution email (.msg or .eml)'}
               </p>
-              <p className="mt-1 text-[11px] text-slate-500">Only .msg files are supported.</p>
+              <p className="mt-1 text-[11px] text-slate-500">Supported formats: .msg, .eml</p>
               <input
                 ref={closeFileInputRef}
                 type="file"
-                accept=".msg"
+                accept={EMAIL_FILE_ACCEPT}
                 className="hidden"
                 onChange={(e) => handleSolutionFile(e.target.files?.[0] || null)}
               />

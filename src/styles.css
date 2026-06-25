@@ -114,3 +114,81 @@ body {
   color: #0f766e;
 }
 
+.email-html-body {
+  font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #000000;
+  word-break: break-word;
+}
+
+.email-html-body table {
+  display: table;
+  border-collapse: collapse;
+  width: auto;
+  max-width: 100%;
+  margin: 0.5rem 0 1rem;
+}
+
+.email-html-body thead {
+  display: table-header-group;
+}
+
+.email-html-body tbody {
+  display: table-row-group;
+}
+
+.email-html-body tr {
+  display: table-row;
+}
+
+.email-html-body td,
+.email-html-body th {
+  display: table-cell;
+  vertical-align: top;
+  padding: 2px 6px;
+}
+
+.email-html-body table[border]:not([border="0"]) td,
+.email-html-body table[border]:not([border="0"]) th,
+.email-html-body table[style*="border"] td,
+.email-html-body table[style*="border"] th {
+  border: 1px solid #000000;
+}
+
+.email-html-body td[style*="border"],
+.email-html-body th[style*="border"] {
+  border-style: solid;
+}
+
+.email-html-body img {
+  max-width: 100%;
+  height: auto;
+  display: inline-block;
+}
+
+.email-html-body a {
+  color: #0563c1;
+  text-decoration: underline;
+}
+
+.email-html-body p {
+  margin: 0 0 0.75rem;
+}
+
+.email-html-body blockquote {
+  margin: 0 0 0.75rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid #cbd5e1;
+  color: #475569;
+}
+
+.email-html-body font {
+  line-height: inherit;
+}
+
+.email-html-body pre {
+  white-space: pre-wrap;
+  font-family: inherit;
+}
+
