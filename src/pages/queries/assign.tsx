@@ -9,6 +9,7 @@ interface AssignedQuery {
   id: number;
   queryCode: string;
   clientName?: string;
+  pssText?: string;
   state?: string;
   status: string;
   responsibilityTo?: string;
@@ -97,17 +98,17 @@ const AssignQueriesPage: React.FC = () => {
             </p>
           )}
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <table className="min-w-full table-fixed divide-y divide-slate-200 text-sm">
               <thead className="bg-[#0f766e]">
                 <tr>
                   <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
                     S.No.
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                    Ticket ID
+                    Client
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
-                    Client
+                    PSS Name
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
                     Raised by
@@ -115,7 +116,7 @@ const AssignQueriesPage: React.FC = () => {
                   <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
                     Assigned to
                   </th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
+                  <th className="w-36 max-w-36 px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
                     Email (.msg / .eml)
                   </th>
                   <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white">
@@ -152,19 +153,18 @@ const AssignQueriesPage: React.FC = () => {
                       >
                         {index + 1}
                       </td>
-                      <td className="px-4 py-2 font-mono text-xs font-semibold text-teal-700">
-                        {q.queryCode}
-                      </td>
                       <td className="px-4 py-2 text-slate-800">{q.clientName || '-'}</td>
+                      <td className="px-4 py-2 text-slate-800">{q.pssText || '-'}</td>
                       <td className="px-4 py-2 text-slate-700">{q.raisedBy || '-'}</td>
                       <td className="px-4 py-2 text-slate-700">{q.responsibilityTo || '-'}</td>
-                      <td className="px-4 py-2 text-[11px] text-slate-700">
+                      <td className="w-36 max-w-36 px-4 py-2 text-[11px] text-slate-700">
                         {q.attachments && q.attachments.length > 0 ? (
                           <a
                             href={user ? `${q.attachments[0].url}?actorId=${user.id}` : q.attachments[0].url}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-indigo-600 hover:underline"
+                            title={q.attachments[0].fileName}
+                            className="block truncate text-indigo-600 hover:underline"
                           >
                             {q.attachments[0].fileName}
                           </a>

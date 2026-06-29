@@ -74,6 +74,59 @@ const IconMonth = () => (
   </svg>
 );
 
+const ChartPanel: React.FC<{
+  title: string;
+  subtitle: string;
+  accent: string;
+  accentSoft: string;
+  loading: boolean;
+  empty: boolean;
+  emptyText: string;
+  children: React.ReactNode;
+  wide?: boolean;
+}> = ({ title, subtitle, accent, accentSoft, loading, empty, emptyText, children, wide }) => (
+  <div
+    className={`group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(15,23,42,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(15,23,42,0.08)] ${
+      wide ? 'md:col-span-2' : ''
+    }`}
+  >
+    <div className="absolute inset-x-0 top-0 h-1" style={{ background: accent }} />
+    <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full opacity-60 blur-2xl" style={{ background: accentSoft }} />
+    <div className="relative border-b border-slate-100 px-5 py-4">
+      <div className="flex items-start gap-3">
+        <div
+          className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm"
+          style={{ background: accentSoft, color: accent }}
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 19h16M6 16l3-4 3 3 5-7 3 4" />
+          </svg>
+        </div>
+        <div>
+          <h3 className="text-sm font-bold tracking-wide text-slate-800">{title}</h3>
+          <p className="mt-1 text-xs leading-relaxed text-slate-500">{subtitle}</p>
+        </div>
+      </div>
+    </div>
+    <div className="relative px-3 pb-4 pt-2 sm:px-4">
+      {loading ? (
+        <div className="flex h-[280px] items-center justify-center rounded-xl bg-slate-50/70">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-teal-500" />
+            Loading chart...
+          </div>
+        </div>
+      ) : empty ? (
+        <div className="flex h-[280px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/60">
+          <p className="text-sm italic text-slate-500">{emptyText}</p>
+        </div>
+      ) : (
+        children
+      )}
+    </div>
+  </div>
+);
+
 const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -242,156 +295,141 @@ const DashboardPage: React.FC = () => {
 
         {/* CHARTS CONTAINER - SECTION 1 */}
         <section className="grid gap-6 md:grid-cols-2">
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
-            <div className="border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Tickets by status</h3>
-              <p className="mt-0.5 text-xs text-slate-400">Operational ticket breakdown by status type.</p>
-            </div>
-            <div className="mt-6">
-              {byStatus.length === 0 && !loading ? (
-                <p className="text-sm text-slate-500 italic">No ticket data yet.</p>
-              ) : (
-                <DashboardChart
-                  type="column"
-                  categories={byStatus.map((d) => d.label)}
-                  seriesData={byStatus.map((d) => d.value)}
-                  seriesName="Tickets"
-                  colors={['#0f766e']}
-                />
-              )}
-            </div>
-          </div>
+          <ChartPanel
+            title="Tickets by Status"
+            subtitle="Operational ticket breakdown by current status."
+            accent="#0f766e"
+            accentSoft="rgba(20, 184, 166, 0.14)"
+            loading={loading}
+            empty={byStatus.length === 0}
+            emptyText="No ticket data yet."
+          >
+            <DashboardChart
+              type="column"
+              categories={byStatus.map((d) => d.label)}
+              seriesData={byStatus.map((d) => d.value)}
+              seriesName="Tickets"
+              colors={['#0d9488']}
+            />
+          </ChartPanel>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
-            <div className="border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Tickets by technology</h3>
-              <p className="mt-0.5 text-xs text-slate-400">Distribution of tickets across energy technologies.</p>
-            </div>
-            <div className="mt-6">
-              {byTechnology.length === 0 && !loading ? (
-                <p className="text-sm text-slate-500 italic">No ticket data yet.</p>
-              ) : (
-                <DashboardChart
-                  type="column"
-                  categories={byTechnology.map((d) => d.label)}
-                  seriesData={byTechnology.map((d) => d.value)}
-                  seriesName="Tickets"
-                  colors={['#4f46e5']}
-                />
-              )}
-            </div>
-          </div>
+          <ChartPanel
+            title="Tickets by Technology"
+            subtitle="Distribution of tickets across energy technologies."
+            accent="#4f46e5"
+            accentSoft="rgba(99, 102, 241, 0.14)"
+            loading={loading}
+            empty={byTechnology.length === 0}
+            emptyText="No ticket data yet."
+          >
+            <DashboardChart
+              type="column"
+              categories={byTechnology.map((d) => d.label)}
+              seriesData={byTechnology.map((d) => d.value)}
+              seriesName="Tickets"
+              colors={['#6366f1']}
+            />
+          </ChartPanel>
         </section>
 
         {/* CHARTS CONTAINER - SECTION 2 */}
         <section className="grid gap-6 md:grid-cols-2">
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
-            <div className="border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Technical tickets (month-wise)</h3>
-              <p className="mt-0.5 text-xs text-slate-400">Monthly ticket trend aggregate volumes.</p>
-            </div>
-            <div className="mt-6">
-              {byMonth.length === 0 && !loading ? (
-                <p className="text-sm text-slate-500 italic">No ticket data yet.</p>
-              ) : (
-                <DashboardChart
-                  type="column"
-                  categories={byMonth.map((d) => d.label)}
-                  seriesData={byMonth.map((d) => d.value)}
-                  seriesName="Tickets"
-                  colors={['#10b981']}
-                />
-              )}
-            </div>
-          </div>
+          <ChartPanel
+            title="Technical Tickets (Month-wise)"
+            subtitle="Monthly ticket trend and aggregate volumes."
+            accent="#059669"
+            accentSoft="rgba(16, 185, 129, 0.14)"
+            loading={loading}
+            empty={byMonth.length === 0}
+            emptyText="No ticket data yet."
+          >
+            <DashboardChart
+              type="column"
+              categories={byMonth.map((d) => d.label)}
+              seriesData={byMonth.map((d) => d.value)}
+              seriesName="Tickets"
+              colors={['#10b981']}
+            />
+          </ChartPanel>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
-            <div className="border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Date-wise technical tickets</h3>
-              <p className="mt-0.5 text-xs text-slate-400">Daily frequency trend of incoming tickets.</p>
-            </div>
-            <div className="mt-6">
-              {byDate.length === 0 && !loading ? (
-                <p className="text-sm text-slate-500 italic">No recent ticket data.</p>
-              ) : (
-                <DashboardChart
-                  type="area"
-                  categories={byDate.map((d) => d.label)}
-                  seriesData={byDate.map((d) => d.value)}
-                  seriesName="Tickets"
-                  colors={['#0f766e']}
-                />
-              )}
-            </div>
-          </div>
+          <ChartPanel
+            title="Date-wise Technical Tickets"
+            subtitle="Daily frequency trend of incoming tickets."
+            accent="#0f766e"
+            accentSoft="rgba(13, 148, 136, 0.14)"
+            loading={loading}
+            empty={byDate.length === 0}
+            emptyText="No recent ticket data."
+          >
+            <DashboardChart
+              type="area"
+              categories={byDate.map((d) => d.label)}
+              seriesData={byDate.map((d) => d.value)}
+              seriesName="Tickets"
+              colors={['#0d9488']}
+            />
+          </ChartPanel>
         </section>
 
         {/* CHARTS CONTAINER - SECTION 3 */}
         <section className="grid gap-6 md:grid-cols-2">
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
-            <div className="border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Team workload (assignee-wise)</h3>
-              <p className="mt-0.5 text-xs text-slate-400">Active assigned ticket distribution among team members.</p>
-            </div>
-            <div className="mt-6">
-              {byUser.length === 0 && !loading ? (
-                <p className="text-sm text-slate-500 italic">No ticket data yet.</p>
-              ) : (
-                <DashboardChart
-                  type="column"
-                  categories={byUser.map((d) => d.label)}
-                  seriesData={byUser.map((d) => d.value)}
-                  seriesName="Tickets"
-                  colors={['#0ea5e9']}
-                />
-              )}
-            </div>
-          </div>
+          <ChartPanel
+            title="Team Workload"
+            subtitle="Active assigned ticket distribution among team members."
+            accent="#0284c7"
+            accentSoft="rgba(14, 165, 233, 0.14)"
+            loading={loading}
+            empty={byUser.length === 0}
+            emptyText="No ticket data yet."
+          >
+            <DashboardChart
+              type="column"
+              categories={byUser.map((d) => d.label)}
+              seriesData={byUser.map((d) => d.value)}
+              seriesName="Tickets"
+              colors={['#0ea5e9']}
+            />
+          </ChartPanel>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
-            <div className="border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">State-wise ticket analysis</h3>
-              <p className="mt-0.5 text-xs text-slate-400">Geographic distribution of raised tickets.</p>
-            </div>
-            <div className="mt-6">
-              {byState.length === 0 && !loading ? (
-                <p className="text-sm text-slate-500 italic">No ticket data yet.</p>
-              ) : (
-                <DashboardChart
-                  type="column"
-                  categories={byState.map((d) => d.label)}
-                  seriesData={byState.map((d) => d.value)}
-                  seriesName="Tickets"
-                  colors={['#8b5cf6']}
-                />
-              )}
-            </div>
-          </div>
+          <ChartPanel
+            title="State-wise Ticket Analysis"
+            subtitle="Geographic distribution of raised tickets."
+            accent="#7c3aed"
+            accentSoft="rgba(139, 92, 246, 0.14)"
+            loading={loading}
+            empty={byState.length === 0}
+            emptyText="No ticket data yet."
+          >
+            <DashboardChart
+              type="column"
+              categories={byState.map((d) => d.label)}
+              seriesData={byState.map((d) => d.value)}
+              seriesName="Tickets"
+              colors={['#8b5cf6']}
+            />
+          </ChartPanel>
         </section>
 
         {/* CHARTS CONTAINER - SECTION 4 */}
-        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-shadow duration-200">
-          <div className="border-b border-slate-100 pb-3">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
-              State-wise tickets (quarterly comparison)
-            </h3>
-            <p className="mt-0.5 text-xs text-slate-400">
-              Granular quarterly state-wise comparison of ticket volumes.
-            </p>
-          </div>
-          <div className="mt-6">
-            {byStateQuarterly.length === 0 && !loading ? (
-              <p className="text-sm text-slate-500 italic">No ticket data yet.</p>
-            ) : (
-              <DashboardChart
-                type="column"
-                categories={byStateQuarterly.map((p) => `${p.state} - ${p.quarter}`)}
-                seriesData={byStateQuarterly.map((p) => p.value)}
-                seriesName="Tickets"
-                colors={['#ec4899']}
-              />
-            )}
-          </div>
+        <section className="grid gap-6">
+          <ChartPanel
+            title="State-wise Tickets (Quarterly Comparison)"
+            subtitle="Granular quarterly state-wise comparison of ticket volumes."
+            accent="#db2777"
+            accentSoft="rgba(236, 72, 153, 0.14)"
+            loading={loading}
+            empty={byStateQuarterly.length === 0}
+            emptyText="No ticket data yet."
+            wide
+          >
+            <DashboardChart
+              type="column"
+              categories={byStateQuarterly.map((p) => `${p.state} - ${p.quarter}`)}
+              seriesData={byStateQuarterly.map((p) => p.value)}
+              seriesName="Tickets"
+              colors={['#ec4899']}
+            />
+          </ChartPanel>
         </section>
       </div>
     </Layout>

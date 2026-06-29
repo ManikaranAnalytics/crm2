@@ -34,10 +34,9 @@ interface ClientPssOption {
 	transmissionType: 'STU' | 'CTU' | null;
 }
 
-	type IssueType = 'HIGH_DSM' | 'OTHER';
-	// type InitialStatus = 'OPEN' | 'CLOSED';
+type IssueType = 'HIGH_DSM' | 'OTHER';
 
-	const NewQueryPage: React.FC = () => {
+const NewQueryPage: React.FC = () => {
 		const { user } = useAuth();
 		const canAddQuery = !!user && ['ADMIN', 'MANAGER', 'KAM'].includes(user.role);
 		const [form, setForm] = useState({
@@ -55,6 +54,7 @@ interface ClientPssOption {
 			issueOtherText: '',
 			// status: 'OPEN' as InitialStatus,
 		});
+
 	const [clientList, setClientList] = useState<ClientOption[]>([]);
 	const [clientPssList, setClientPssList] = useState<ClientPssOption[]>([]);
 	const [clientQuery, setClientQuery] = useState('');
@@ -182,6 +182,33 @@ interface ClientPssOption {
 		return () => document.removeEventListener('mousedown', handleDocClick);
 	}, []);
 
+	const resetForm = () => {
+		setForm({
+			clientId: '',
+			clientName: '',
+			pssId: '',
+			pssText: '',
+			state: '',
+			capacityMw: '',
+			technology: '',
+			transmissionType: '',
+			issueStartDate: '',
+			issueEndDate: '',
+			issueType: 'HIGH_DSM',
+			issueOtherText: '',
+		});
+		setClientQuery('');
+		setPssQuery('');
+		setClientOpen(false);
+		setPssOpen(false);
+		setClientHighlight(0);
+		setPssHighlight(0);
+		setAttachment(null);
+		if (fileInputRef.current) {
+			fileInputRef.current.value = '';
+		}
+	};
+
 	const filteredClients = useMemo(() => {
 		const q = clientQuery.trim().toLowerCase();
 		const list = q
@@ -268,8 +295,14 @@ interface ClientPssOption {
 	const handleChange = (
 		e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
 	) => {
+		setMessage(null);
 		const { name, value } = e.target;
 		setForm((prev) => ({ ...prev, [name]: value }));
+	};
+
+	const openDatePicker = (event: React.MouseEvent<HTMLInputElement>) => {
+		event.preventDefault();
+		event.currentTarget.showPicker?.();
 	};
 
 	const handleIssueTypeChange = (value: IssueType) => {
@@ -344,9 +377,14 @@ interface ClientPssOption {
 					return;
 				}
 			}
-			// Require the original client email (.msg or .eml) for every new query
-			if (!attachment) {
-				setError('Please attach the client email (.msg or .eml) before saving the ticket.');
+			const clientName = (form.clientName || clientQuery).trim();
+			const pssText = (form.pssText || pssQuery).trim();
+			if (!clientName) {
+				setError('Please enter a client name');
+				return;
+			}
+			if (!pssText) {
+				setError('Please enter a PSS name');
 				return;
 			}
 			setSubmitting(true);
@@ -358,9 +396,9 @@ interface ClientPssOption {
 						: undefined;
 				const payload: any = {
 				clientId: form.clientId ? Number(form.clientId) : undefined,
-				clientName: form.clientName.trim() || undefined,
+				clientName,
 				pssId: form.pssId ? Number(form.pssId) : undefined,
-				pssText: form.pssText || undefined,
+				pssText,
 				state: form.state || undefined,
 				capacityMw: form.capacityMw || undefined,
 				technology: form.technology || undefined,
@@ -368,7 +406,7 @@ interface ClientPssOption {
 				periodOfIssue,
 					issue: issueValue,
 					// status: form.status,
-					attachment,
+					...(attachment ? { attachment } : {}),
 				};
 			const res = await fetch('/api/queries', {
 				method: 'POST',
@@ -379,7 +417,14 @@ interface ClientPssOption {
 				const body = await res.json().catch(() => ({}));
 				throw new Error(body.error || 'Failed to create ticket');
 			}
-			setMessage('Ticket created successfully');
+			const body = await res.json().catch(() => ({}));
+			const queryCode = body.query?.queryCode as string | undefined;
+			resetForm();
+			setMessage(
+				queryCode
+					? `Ticket raised successfully. Reference: ${queryCode}`
+					: 'Ticket raised successfully.',
+			);
 		} catch (err: any) {
 			setError(err.message || 'Failed to create ticket');
 		} finally {
@@ -418,6 +463,12 @@ interface ClientPssOption {
 						onSubmit={handleSubmit}
 						className="space-y-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
 					>
+						{message && !error && (
+							<div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+								<p className="font-semibold">Ticket Raised</p>
+								<p className="mt-1">{message}</p>
+							</div>
+						)}
 						{error && (
 							<p className="rounded border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700">
 								{error}
@@ -426,7 +477,7 @@ interface ClientPssOption {
 						<div className="grid gap-4 md:grid-cols-2">
 							<div ref={clientBoxRef} className="relative">
 								<label className="block text-sm font-medium text-slate-700" htmlFor="client">
-									Client
+									Client <span className="text-red-500">*</span>
 								</label>
 								<input
 									id="client"
@@ -510,7 +561,7 @@ interface ClientPssOption {
 							</div>
 							<div ref={pssBoxRef} className="relative">
 								<label className="block text-sm font-medium text-slate-700" htmlFor="pss">
-									PSS
+									PSS <span className="text-red-500">*</span>
 									{form.clientId && (
 										<span className="ml-1 text-[11px] font-normal text-slate-500">
 											{loadingClientPss
@@ -666,7 +717,8 @@ interface ClientPssOption {
 							type="date"
 							value={form.issueStartDate}
 							onChange={handleChange}
-							className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+							onMouseDown={openDatePicker}
+							className="date-input-field w-full cursor-pointer rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
 						/>
 						<span className="text-xs text-slate-500">to</span>
 						<input
@@ -675,7 +727,8 @@ interface ClientPssOption {
 							type="date"
 							value={form.issueEndDate}
 							onChange={handleChange}
-							className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+							onMouseDown={openDatePicker}
+							className="date-input-field w-full cursor-pointer rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
 						/>
 					</div>
 					<p className="mt-1 text-[11px] text-slate-500">Select the start and end dates from the calendar.</p>
@@ -761,16 +814,14 @@ interface ClientPssOption {
 								Export Draft (.eml)
 							</button>
 						</div>
-
-						{message && !error && <p className="text-sm text-teal-700">{message}</p>}
 					</form>
 
 					<section className="space-y-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-5 text-sm">
 						<div>
-							<h3 className="text-sm font-semibold text-slate-900">Attach email (.msg or .eml)</h3>
+							<h3 className="text-sm font-semibold text-slate-900">Attach email (.msg or .eml) <span className="font-normal text-slate-500">(optional)</span></h3>
 							<p className="mt-1 text-xs text-slate-500">
 								Drag and drop the email (.msg or .eml) related to this ticket, or click to browse.
-								Himanshu will be able to download and review it while assigning/approving.
+								You can save the ticket without an email attachment.
 							</p>
 						</div>
 						<div

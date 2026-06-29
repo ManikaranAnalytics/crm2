@@ -3,7 +3,7 @@
 
 import { query } from '../lib/db';
 import { pickAutoAssignee } from './assignmentService';
-import { notifyQueryAssigned, notifyQueryReply } from './notificationService';
+import { notifyQueryAssigned, notifyTicketResolved } from './notificationService';
 
 export const QUERY_STATUS_CODES = [
   'OPEN',
@@ -184,9 +184,18 @@ export async function createQuery(input: CreateQueryInput): Promise<QueryRecord>
     throw new Error('issue is required');
   }
 
+  const clientName = input.clientName?.trim() ?? '';
+  const pssText = input.pssText?.trim() ?? '';
+  if (!clientName && !input.clientId) {
+    throw new Error('Client name is required');
+  }
+  if (!pssText && !input.pssId) {
+    throw new Error('PSS name is required');
+  }
+
   let clientId = input.clientId;
-  if (!clientId && input.clientName && input.clientName.trim()) {
-    const clientTrimmed = input.clientName.trim();
+  if (!clientId && clientName) {
+    const clientTrimmed = clientName;
     const existingClient = await query<{ id: number }>(
       `SELECT id FROM clients WHERE UPPER(name) = UPPER($1) LIMIT 1`,
       [clientTrimmed],
@@ -245,7 +254,7 @@ export async function createQuery(input: CreateQueryInput): Promise<QueryRecord>
       queryCode,
       clientId ?? null,
       input.pssId ?? null,
-      input.pssText ?? null,
+      input.pssText?.trim() || pssText || null,
       input.state ?? null,
       capacity,
       input.technology ?? null,
@@ -300,7 +309,6 @@ export async function createQuery(input: CreateQueryInput): Promise<QueryRecord>
     const assigneeId = await pickAutoAssignee();
     if (assigneeId) {
       assignedRecord = await assignQueryToUser(row.id, assigneeId);
-      await notifyQueryAssigned(assigneeId, row.id, row.query_code);
     }
   }
 
@@ -312,6 +320,7 @@ export async function listActiveQueriesForReply(): Promise<QueryRecord[]> {
     id: number;
     query_code: string;
     client_name: string | null;
+    pss_text: string | null;
     state: string | null;
     current_status: string;
     responsibility_to: string | null;
@@ -324,6 +333,7 @@ export async function listActiveQueriesForReply(): Promise<QueryRecord[]> {
     `SELECT q.id,
             q.query_code,
             c.name AS client_name,
+            q.pss_text,
             q.state,
             q.current_status,
             q.responsibility_to,
@@ -351,6 +361,7 @@ export async function listActiveQueriesForReply(): Promise<QueryRecord[]> {
     id: row.id,
     queryCode: row.query_code,
     clientName: row.client_name ?? undefined,
+    pssText: row.pss_text ?? undefined,
     state: row.state ?? undefined,
     status: row.current_status,
     responsibilityTo: row.responsibility_to ?? undefined,
@@ -632,9 +643,10 @@ export async function createQueryReply(input: {
   const queryResult = await query<{
     current_status: string;
     raised_by_id: number | null;
+    responsibility_to_id: number | null;
     query_code: string;
   }>(
-    `SELECT current_status, raised_by_id, query_code
+    `SELECT current_status, raised_by_id, responsibility_to_id, query_code
        FROM queries WHERE id = $1`,
     [input.queryId],
   );
@@ -686,16 +698,24 @@ export async function createQueryReply(input: {
   );
   const closedDate = closeResult.rows[0]?.closed_date ?? new Date().toISOString();
 
-  if (queryRow.raised_by_id) {
-    await notifyQueryReply(
-      queryRow.raised_by_id,
-      input.queryId,
+  const recipientIds = Array.from(
+    new Set(
+      [queryRow.raised_by_id, queryRow.responsibility_to_id].filter(
+        (id): id is number => typeof id === 'number' && id > 0,
+      ),
+    ),
+  );
+
+  if (recipientIds.length > 0) {
+    await notifyTicketResolved({
+      queryId: input.queryId,
+      queryCode: queryRow.query_code,
+      resolvedByName: author.name,
+      resolvedAt: closedDate,
+      preview: input.body.trim(),
       replyId,
-      author.name,
-      queryRow.query_code,
-      input.body.trim(),
-      closedDate,
-    );
+      recipientIds,
+    });
   }
 
   return { replyId, status: 'CLOSED', closedDate };
@@ -739,6 +759,8 @@ export async function assignQueryToUser(
     throw new Error('Ticket not found');
   }
 
+  await notifyQueryAssigned(assigneeUserId, row.id, row.query_code);
+
   return {
     id: row.id,
     queryCode: row.query_code,
@@ -766,6 +788,9 @@ export async function updateQueryStatusWithApproval(
     query_code: string;
     state: string | null;
     current_status: string;
+    raised_by_id: number | null;
+    responsibility_to_id: number | null;
+    closed_date: string | null;
   }>(
     `UPDATE queries
 	       SET current_status = $2,
@@ -773,9 +798,13 @@ export async function updateQueryStatusWithApproval(
 	           close_request_date = CASE
 	             WHEN $2 = 'CLOSED' THEN COALESCE(close_request_date, now())
 	             ELSE close_request_date
+	           END,
+	           closed_date = CASE
+	             WHEN $2 = 'CLOSED' THEN COALESCE(closed_date, now())
+	             ELSE closed_date
 	           END
 	     WHERE id = $1
-	     RETURNING id, query_code, state, current_status`,
+	     RETURNING id, query_code, state, current_status, raised_by_id, responsibility_to_id, closed_date`,
     [queryId, newStatus],
   );
 
@@ -809,6 +838,32 @@ export async function updateQueryStatusWithApproval(
 	     ) VALUES ($1, $2, $3, $4, $5)`,
     [queryId, newStatus, requestedById, approverId, comment],
   );
+
+  if (newStatus === 'CLOSED') {
+    const requesterResult = await query<{ name: string }>(
+      `SELECT name FROM users WHERE id = $1`,
+      [requestedById],
+    );
+    const resolvedByName = requesterResult.rows[0]?.name ?? 'Team member';
+    const recipientIds = Array.from(
+      new Set(
+        [updated.raised_by_id, updated.responsibility_to_id].filter(
+          (id): id is number => typeof id === 'number' && id > 0,
+        ),
+      ),
+    );
+
+    if (recipientIds.length > 0) {
+      await notifyTicketResolved({
+        queryId: updated.id,
+        queryCode: updated.query_code,
+        resolvedByName,
+        resolvedAt: updated.closed_date ?? new Date().toISOString(),
+        preview: comment ?? undefined,
+        recipientIds,
+      });
+    }
+  }
 
   return {
     id: updated.id,

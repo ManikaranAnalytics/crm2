@@ -45,8 +45,67 @@ export async function notifyQueryAssigned(
     queryId,
     type: 'QUERY_ASSIGNED',
     title: 'New ticket assigned',
-    message: `Ticket ${queryCode} has been automatically assigned to you.`,
+    message: `Ticket ${queryCode} has been assigned to you. Status: Pending.`,
   });
+}
+
+export async function notifyTicketResolved(input: {
+  queryId: number;
+  queryCode: string;
+  resolvedByName: string;
+  resolvedAt: string;
+  preview?: string;
+  replyId?: number;
+  recipientIds: number[];
+}): Promise<void> {
+  const trimmed = (input.preview ?? '').trim();
+  const snippet = trimmed
+    ? trimmed.length > 120
+      ? `${trimmed.slice(0, 117)}...`
+      : trimmed
+    : '';
+  const timestamp = new Date(input.resolvedAt).toLocaleString();
+  const message = snippet
+    ? `${input.resolvedByName} resolved this ticket at ${timestamp}. Status: Resolved. ${snippet}`
+    : `${input.resolvedByName} resolved this ticket at ${timestamp}. Status: Resolved.`;
+  const title = `${input.queryCode} resolved`;
+
+  // Turn existing pending (assigned) notifications into resolved for this ticket.
+  await query(
+    `UPDATE notifications
+        SET type = 'QUERY_REPLY',
+            title = $1,
+            message = $2,
+            reply_id = $3,
+            is_read = FALSE,
+            created_at = now()
+      WHERE query_id = $4 AND type = 'QUERY_ASSIGNED'`,
+    [title, message, input.replyId ?? null, input.queryId],
+  );
+
+  const coveredResult = await query<{ user_id: number }>(
+    `SELECT DISTINCT user_id
+       FROM notifications
+      WHERE query_id = $1 AND type = 'QUERY_REPLY'`,
+    [input.queryId],
+  );
+  const coveredUserIds = new Set(coveredResult.rows.map((row) => row.user_id));
+
+  const uniqueRecipientIds = Array.from(new Set(input.recipientIds.filter((id) => id > 0)));
+  await Promise.all(
+    uniqueRecipientIds
+      .filter((userId) => !coveredUserIds.has(userId))
+      .map((userId) =>
+        createNotification({
+          userId,
+          queryId: input.queryId,
+          replyId: input.replyId,
+          type: 'QUERY_REPLY',
+          title,
+          message,
+        }),
+      ),
+  );
 }
 
 export async function notifyQueryReply(
@@ -58,16 +117,14 @@ export async function notifyQueryReply(
   preview: string,
   resolvedAt: string,
 ): Promise<void> {
-  const trimmed = preview.trim();
-  const snippet = trimmed.length > 120 ? `${trimmed.slice(0, 117)}...` : trimmed;
-  const timestamp = new Date(resolvedAt).toLocaleString();
-  await createNotification({
-    userId: recipientId,
+  await notifyTicketResolved({
     queryId,
+    queryCode,
+    resolvedByName: authorName,
+    resolvedAt,
+    preview,
     replyId,
-    type: 'QUERY_REPLY',
-    title: `${queryCode} resolved`,
-    message: `${authorName} replied at ${timestamp}. Status: DONE. ${snippet}`,
+    recipientIds: [recipientId],
   });
 }
 
@@ -92,7 +149,7 @@ export async function listNotifications(userId: number): Promise<NotificationRec
          FROM notifications
         WHERE user_id = $1 AND is_read = TRUE
         ORDER BY created_at DESC
-        LIMIT 3
+        LIMIT 10
      )
      SELECT id, query_id, reply_id, type, title, message, is_read, created_at
        FROM (

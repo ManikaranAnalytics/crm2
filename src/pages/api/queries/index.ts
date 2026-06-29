@@ -99,17 +99,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 	        attachment,
 	      } = req.body || {};
 
-		      // Require the original client email as a .msg or .eml attachment for every new query
-		      if (!attachment || !attachment.dataBase64 || !attachment.fileName) {
-		        return res
-		          .status(400)
-		          .json({ error: 'Client email (.msg or .eml) attachment is required to create a ticket' });
-		      }
-		      if (
-		        typeof attachment.fileName !== 'string' ||
-		        !isEmailFileName(attachment.fileName)
-		      ) {
-		        return res.status(400).json({ error: 'Attachment must be a .msg or .eml email file' });
+		      if (attachment?.dataBase64 && attachment?.fileName) {
+		        if (
+		          typeof attachment.fileName !== 'string' ||
+		          !isEmailFileName(attachment.fileName)
+		        ) {
+		          return res.status(400).json({ error: 'Attachment must be a .msg or .eml email file' });
+		        }
 		      }
 
 	      const created = await createQuery({
@@ -131,31 +127,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 	        raisedById: user.id,
 	      });
 
-		      // Persist the .msg attachment along with the query
-		      const base64: string = attachment.dataBase64;
-		      const buffer = Buffer.from(base64, 'base64');
-		      const uploadsDir = path.join(
-		        process.cwd(),
-		        'uploads_secure',
-		        `query_${created.id}`
-		      );
-		      await fs.promises.mkdir(uploadsDir, { recursive: true });
-		      const safeName = String(attachment.fileName).replace(/[^a-zA-Z0-9._-]/g, '_');
-		      const timestamp = Math.floor(Date.now() / 1000);
-		      const uniqueName = `query_${created.id}_${timestamp}_${safeName}`;
-		      const diskPath = path.join(uploadsDir, uniqueName);
-		      await fs.promises.writeFile(diskPath, buffer);
-		      const publicPath = `/api/attachments/query_${created.id}/${uniqueName}`;
-		      const contentType =
-		        typeof attachment.contentType === 'string' && attachment.contentType
-		          ? attachment.contentType
-		          : 'application/octet-stream';
-		
-		      await query(
-		        `INSERT INTO attachments (owner_type, owner_id, file_name, file_path, content_type, uploaded_by)
-		         VALUES ('QUERY', $1, $2, $3, $4, $5)`,
-		        [created.id, attachment.fileName, publicPath, contentType, user.id],
-		      );
+		      if (attachment?.dataBase64 && attachment?.fileName) {
+		        const base64: string = attachment.dataBase64;
+		        const buffer = Buffer.from(base64, 'base64');
+		        const uploadsDir = path.join(
+		          process.cwd(),
+		          'uploads_secure',
+		          `query_${created.id}`
+		        );
+		        await fs.promises.mkdir(uploadsDir, { recursive: true });
+		        const safeName = String(attachment.fileName).replace(/[^a-zA-Z0-9._-]/g, '_');
+		        const timestamp = Math.floor(Date.now() / 1000);
+		        const uniqueName = `query_${created.id}_${timestamp}_${safeName}`;
+		        const diskPath = path.join(uploadsDir, uniqueName);
+		        await fs.promises.writeFile(diskPath, buffer);
+		        const publicPath = `/api/attachments/query_${created.id}/${uniqueName}`;
+		        const contentType =
+		          typeof attachment.contentType === 'string' && attachment.contentType
+		            ? attachment.contentType
+		            : 'application/octet-stream';
+
+		        await query(
+		          `INSERT INTO attachments (owner_type, owner_id, file_name, file_path, content_type, uploaded_by)
+		           VALUES ('QUERY', $1, $2, $3, $4, $5)`,
+		          [created.id, attachment.fileName, publicPath, contentType, user.id],
+		        );
+		      }
 
 	      return res.status(201).json({ query: created });
     } catch (err: any) {
